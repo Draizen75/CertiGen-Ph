@@ -21,10 +21,13 @@ export const metadata: Metadata = {
   description: "The fastest way to generate certificates in bulk. Upload your Word template (.docx), map placeholders like [NAME], and generate accurate certificates from Excel/CSV data. 100% secure, free, and fast.",
   keywords: ["certificate generator", "bulk certificates", "word template generator", "excel to docx", "mail merge", "certificate automation", "philippines"],
   authors: [{ name: "CertiGen PH" }],
+  verification: {
+    google: "rWv0kbBERT9kJpBfm4dqen08mrVXXuggqeCVz2zKiGM",
+  },
   openGraph: {
     title: "CertiGen PH | Bulk Certificate Generator",
     description: "Generate certificates in bulk from Word templates and Excel data instantly.",
-    url: "https://certigen-ph.vercel.app", // Adjust if needed
+    url: "https://certigenph.vercel.app", 
     siteName: "CertiGen PH",
     locale: "en_PH",
     type: "website",
