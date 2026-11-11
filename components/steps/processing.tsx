@@ -186,7 +186,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           <AlertTitle>Generation error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button className="w-full sm:w-auto" onClick={() => setGenerationAttempt((attempt) => attempt + 1)} className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setGenerationAttempt((attempt) => attempt + 1)}>
           Try generating again
         </Button>
         </div>
