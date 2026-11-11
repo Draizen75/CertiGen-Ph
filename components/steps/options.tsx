@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, FileText, FileArchive, Users, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, FileArchive, LockKeyhole } from "lucide-react";
 import { OutputMode } from "@/lib/types";
 
 interface Props {
