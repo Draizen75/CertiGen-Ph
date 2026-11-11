@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { Recipient } from "./types";
 
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
-export const MAX_RECIPIENTS = 5000;
+export const MAX_RECIPIENTS = 1000;
 
 function validateFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
