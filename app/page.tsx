@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { SamplePackDownload } from "@/components/sample-pack-download";
-import { ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Sparkles, Download, CheckCircle2 } from "lucide-react";
+import { ArrowRight, FileArchive, FileSpreadsheet, FileText, ShieldCheck, Sparkles, Download, CheckCircle2 } from "lucide-react";
 
 const benefits = [
   { icon: FileText, label: "Keep your Word design", detail: "Use your existing DOCX certificate template." },
@@ -124,7 +124,7 @@ export default function Home() {
                   <p className="mt-1 font-serif text-lg font-bold italic text-primary">Maria Santos</p>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-5 text-muted-foreground">The sample pack includes a real editable Word template with {{NAME}}, {{EVENT}}, {{DATE}}, and {{ORGANIZER}} placeholders, plus a CSV containing three fictional recipients.</p>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">The sample pack includes a real editable Word template with {'{{NAME}}'}, {'{{EVENT}}'}, {'{{DATE}}'}, and {'{{ORGANIZER}}'} placeholders, plus a CSV containing three fictional recipients.</p>
               <div className="mt-5 flex flex-col items-start gap-3">
                 <SamplePackDownload />
                 <Link href="/generator" className="inline-flex items-center text-sm font-semibold text-primary hover:underline">
