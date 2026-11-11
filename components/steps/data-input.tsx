@@ -130,7 +130,7 @@ export function DataInput({ onDataReady, onBack }: Props) {
               value={bulkNames}
               onChange={(event) => setBulkNames(event.target.value)}
             />
-            <p className="text-xs text-muted-foreground">Blank lines are ignored. Up to 5,000 recipients per batch.</p>
+            <p className="text-xs text-muted-foreground">Blank lines are ignored. Up to 1,000 recipients per batch.</p>
           </div>
           <Button variant="outline" onClick={handleBulkSubmit} className="w-full">Apply recipient names</Button>
         </TabsContent>
