@@ -36,7 +36,7 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
   return (
     <div className="mx-auto max-w-2xl space-y-7 py-2 sm:py-4">
       <div className="text-center">
-        <p className="text-sm font-semibold text-primary">STEP 4 OF 5</p>
+        <p className="text-sm font-semibold text-primary">STEP 4 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your download format</h2>
         <p className="mt-2 text-sm text-muted-foreground">Your batch contains {recipientsCount.toLocaleString()} recipients.</p>
       </div>

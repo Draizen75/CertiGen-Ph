@@ -76,6 +76,7 @@ export function DataInput({ onDataReady, onBack }: Props) {
   const clearData = () => {
     setData([]);
     setExcelFileName(null);
+    setEditingIndex(null);
   };
 
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
@@ -83,7 +84,7 @@ export function DataInput({ onDataReady, onBack }: Props) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <p className="text-sm font-semibold text-primary">STEP 2 OF 5</p>
+        <p className="text-sm font-semibold text-primary">STEP 2 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight">Add your recipients</h2>
         <p className="mt-2 text-sm text-muted-foreground">Import a spreadsheet or paste names. You can review the rows before continuing.</p>
       </div>

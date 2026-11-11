@@ -39,7 +39,7 @@ export function Mapping({ placeholders, delimiters, columns, onMappingComplete, 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="text-center">
-        <p className="text-sm font-semibold text-primary">STEP 3 OF 5</p>
+        <p className="text-sm font-semibold text-primary">STEP 3 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">Match your template fields</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Connect each placeholder in your Word template to the matching spreadsheet column.

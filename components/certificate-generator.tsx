@@ -44,7 +44,7 @@ export function CertificateGenerator() {
   return (
     <div className="space-y-7 sm:space-y-9">
       <nav aria-label="Certificate generation steps" className="mx-auto max-w-4xl">
-        <ol className="grid grid-cols-5 gap-1 sm:gap-3">
+        <ol className="grid grid-cols-6 gap-1 sm:gap-3">
           {steps.map((step, index) => {
             const isComplete = index < currentStepIndex;
             const isCurrent = index === currentStepIndex;

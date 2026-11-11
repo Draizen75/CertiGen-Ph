@@ -78,7 +78,7 @@ export function TemplateUpload({ onFileSelected }: Props) {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="text-center">
-        <p className="text-sm font-semibold text-primary">STEP 1 OF 5</p>
+        <p className="text-sm font-semibold text-primary">STEP 1 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight">Start with your Word template</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Upload a DOCX file that already has the design and layout you want to use.
