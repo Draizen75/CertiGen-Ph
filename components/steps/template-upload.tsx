@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { FileText, Upload, AlertCircle, CheckCircle2, Loader2, X } from "lucide-react";
+import { FileText, Upload, AlertCircle, CheckCircle2, Loader2, X, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getPlaceholdersFromDocx } from "@/lib/docx-engine";
@@ -10,6 +10,8 @@ import { getPlaceholdersFromDocx } from "@/lib/docx-engine";
 interface Props {
   onFileSelected: (file: File, placeholders: string[], delimiters: { start: string; end: string }) => void;
 }
+
+const MAX_TEMPLATE_BYTES = 10 * 1024 * 1024;
 
 export function TemplateUpload({ onFileSelected }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -22,134 +24,134 @@ export function TemplateUpload({ onFileSelected }: Props) {
     const selectedFile = acceptedFiles[0];
     if (!selectedFile) return;
 
-    if (!selectedFile.name.endsWith(".docx")) {
-      setError("Please upload a valid .docx file.");
+    if (!selectedFile.name.toLowerCase().endsWith(".docx")) {
+      setError("Please choose a Word document (.docx).");
+      return;
+    }
+    if (selectedFile.size === 0) {
+      setError("This file is empty. Choose a valid Word template.");
       return;
     }
 
     setIsLoading(true);
     setError(null);
-    setFile(selectedFile);
+    setFile(null);
+    setPlaceholders([]);
 
     try {
-      const { placeholders: phs, delimiters: delim } = await getPlaceholdersFromDocx(selectedFile);
-      setPlaceholders(phs);
-      setDelimiters(delim);
-      if (phs.length === 0) {
-        setError("No placeholders found. Try using [NAME], {{NAME}}, or <NAME>.");
+      const { placeholders: foundPlaceholders, delimiters: foundDelimiters } = await getPlaceholdersFromDocx(selectedFile);
+      if (foundPlaceholders.length === 0) {
+        setError("No placeholders were found. Add fields such as {{NAME}}, [NAME], or «NAME» to your template.");
+        return;
       }
-    } catch (err) {
-      setError("Failed to process the DOCX file. It might be corrupted.");
-      console.error(err);
+      setFile(selectedFile);
+      setPlaceholders(foundPlaceholders);
+      setDelimiters(foundDelimiters);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "We couldn’t read this Word file. It may be corrupted or unsupported.");
+      console.error("Template parsing failed:", uploadError);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
     accept: {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
     },
+    maxSize: MAX_TEMPLATE_BYTES,
     multiple: false,
+    disabled: isLoading,
+    onDropRejected: (rejections) => {
+      const tooLarge = rejections.some((rejection) => rejection.errors.some((issue) => issue.code === "file-too-large"));
+      setError(tooLarge ? "Template files must be 10 MB or smaller." : "Only one .docx Word document can be uploaded at a time.");
+    },
   });
 
+  const removeFile = () => {
+    setFile(null);
+    setPlaceholders([]);
+    setError(null);
+  };
+
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Upload Certificate Template</h2>
-        <p className="text-slate-500 mt-1">
-          Upload your .docx file with placeholders like [NAME] or {"{{NAME}}"}
+        <p className="text-sm font-semibold text-primary">STEP 1 OF 5</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Start with your Word template</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Upload a DOCX file that already has the design and layout you want to use.
         </p>
       </div>
 
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ${
-          isDragActive 
-            ? "border-blue-500 bg-blue-50 scale-[1.02]" 
-            : file 
-              ? "border-green-500 bg-green-50/50 hover:bg-green-50" 
-              : "border-slate-300 hover:border-slate-400 cursor-pointer"
-        }`}
+        className={`group relative flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:min-h-64 sm:p-10 ${isDragActive ? "border-primary bg-primary/5" : file ? "border-emerald-500/50 bg-emerald-500/[0.03]" : "border-border bg-muted/20 hover:border-primary/50 hover:bg-primary/[0.02]"} ${isDragReject ? "border-destructive bg-destructive/5" : ""}`}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center">
-          {file ? (
-            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
-              <div className="bg-green-100 p-4 rounded-full mb-4 shadow-sm">
-                <CheckCircle2 className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="flex items-center space-x-3 bg-white px-6 py-3 rounded-xl shadow-sm border border-green-200">
-                <FileText className="h-6 w-6 text-green-600" />
-                <span className="font-semibold text-green-900">{file.name}</span>
-              </div>
-              <p className="text-sm font-medium text-green-700 mt-4">Template successfully uploaded!</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFile(null);
-                  setPlaceholders([]);
-                }}
-                className="mt-6 text-slate-600 hover:text-red-600 hover:bg-red-50 border-slate-200"
-              >
-                <X className="h-4 w-4 mr-2" /> Remove file
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <div className="bg-blue-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                <Upload className="h-8 w-8 text-blue-600" />
-              </div>
-              <p className="text-lg font-medium text-slate-700">
-                Click to upload or drag and drop
-              </p>
-              <p className="text-sm text-slate-500 mt-1">Only .docx files are supported</p>
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <>
+            <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Loader2 className="size-7 animate-spin" /></span>
+            <p className="font-semibold">Reading your template…</p>
+            <p className="mt-1 text-sm text-muted-foreground">Looking for merge fields in your Word document.</p>
+          </>
+        ) : file ? (
+          <>
+            <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-7" /></span>
+            <p className="max-w-full break-all font-semibold text-foreground">{file.name}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{(file.size / 1024).toFixed(0)} KB · {placeholders.length} fields detected</p>
+            <span className="mt-4 text-xs font-medium text-primary">Choose another file</span>
+            <Button type="button" variant="ghost" size="sm" onClick={(event) => { event.stopPropagation(); removeFile(); }} className="mt-2 text-muted-foreground">
+              <X className="mr-2 size-4" />Remove template
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105"><Upload className="size-7" /></span>
+            <p className="font-semibold text-foreground">{isDragActive ? "Drop your template here" : "Drag and drop your DOCX template"}</p>
+            <p className="mt-2 text-sm text-muted-foreground">or <span className="font-medium text-primary">browse files</span> on your device</p>
+            <span className="mt-5 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">DOCX · Up to 10 MB</span>
+          </>
+        )}
       </div>
-
-      {isLoading && (
-        <div className="flex justify-center items-center py-4">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600 mr-2" />
-          <span className="text-slate-600">Extracting placeholders...</span>
-        </div>
-      )}
 
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertCircle className="size-4" />
+          <AlertTitle>Template issue</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {placeholders.length > 0 && (
-        <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4 text-green-700">
-            <CheckCircle2 className="h-5 w-5" />
-            <h3 className="font-semibold">Found {placeholders.length} placeholders</h3>
+        <div className="rounded-2xl border bg-card p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">Fields detected</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">These values will be personalized for each recipient.</p>
+            </div>
+            <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{placeholders.length} found</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {placeholders.map((ph) => (
-              <code key={ph} className="bg-white border border-slate-200 px-2 py-1 rounded text-sm font-mono text-blue-700">
-                {delimiters.start}{ph}{delimiters.end}
+            {placeholders.map((placeholder) => (
+              <code key={placeholder} className="rounded-lg border bg-muted/60 px-2.5 py-1.5 text-xs font-medium text-foreground">
+                {delimiters.start}{placeholder}{delimiters.end}
               </code>
             ))}
           </div>
         </div>
       )}
 
-      <div className="flex justify-end pt-4">
-        <Button
-          onClick={() => file && placeholders.length > 0 && onFileSelected(file, placeholders, delimiters)}
-          disabled={!file || placeholders.length === 0 || isLoading}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-        >
-          Continue
+      <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-4">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <p className="text-xs leading-5 text-muted-foreground">Your Word template stays on this device. CertiGen reads it locally to detect placeholders before generation.</p>
+      </div>
+
+      <div className="flex justify-end border-t pt-5">
+        <Button onClick={() => file && placeholders.length > 0 && onFileSelected(file, placeholders, delimiters)} disabled={!file || placeholders.length === 0 || isLoading}>
+          Continue to recipient data
+          <FileText className="ml-2 size-4" />
         </Button>
       </div>
     </div>
