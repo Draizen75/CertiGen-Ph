@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileSpreadsheet, ListPlus, UserPlus, ArrowLeft, ArrowRight, Trash2, CheckCircle2, X } from "lucide-react";
+import { FileSpreadsheet, ListPlus, ArrowLeft, ArrowRight, Trash2, CheckCircle2, UploadCloud, Users, Pencil, Check } from "lucide-react";
 import { Recipient } from "@/lib/types";
 import { parseExcelData, parseManualNames } from "@/lib/data-parser";
 import { toast } from "sonner";
@@ -22,209 +22,200 @@ export function DataInput({ onDataReady, onBack }: Props) {
   const [bulkNames, setBulkNames] = useState("");
   const [sharedEvent, setSharedEvent] = useState("");
   const [sharedDate, setSharedDate] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
+    setIsImporting(true);
 
     try {
       const results = await parseExcelData(file);
       setData(results);
       setExcelFileName(file.name);
-      toast.success(`Successfully imported ${results.length} recipients.`);
-    } catch (err) {
-      toast.error("Failed to parse the data file.");
-      console.error(err);
+      toast.success(`Imported ${results.length.toLocaleString()} recipients.`);
+    } catch (error) {
+      setData([]);
+      setExcelFileName(null);
+      toast.error(error instanceof Error ? error.message : "Could not read this spreadsheet.");
+      console.error("Recipient import failed:", error);
+    } finally {
+      setIsImporting(false);
+      event.target.value = "";
     }
   };
 
   const handleBulkSubmit = () => {
-    if (!bulkNames.trim()) return;
-    const results = parseManualNames(bulkNames, {
-      EVENT: sharedEvent,
-      DATE: sharedDate,
-    });
-    setData(results);
-    toast.success(`Successfully added ${results.length} recipients.`);
+    try {
+      const results = parseManualNames(bulkNames, {
+        EVENT: sharedEvent.trim(),
+        DATE: sharedDate.trim(),
+      });
+      if (results.length === 0) {
+        toast.error("Enter at least one recipient name, one per line.");
+        return;
+      }
+      setData(results);
+      setExcelFileName(null);
+      toast.success(`Added ${results.length.toLocaleString()} recipients.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add these names.");
+    }
   };
 
-  const removeRow = (idx: number) => {
-    const newData = [...data];
-    newData.splice(idx, 1);
-    setData(newData);
+  const updateCell = (rowIndex: number, column: string, value: string) => {
+    setData((current) => current.map((row, index) => (
+      index === rowIndex ? { ...row, [column]: value } : row
+    )));
   };
+  const removeRow = (index: number) => {
+    setData((current) => current.filter((_, rowIndex) => rowIndex !== index));
+    setEditingIndex((current) => current === index ? null : current !== null && current > index ? current - 1 : current);
+  };
+  const clearData = () => {
+    setData([]);
+    setExcelFileName(null);
+    setEditingIndex(null);
+  };
+
+  const columns = data.length > 0 ? Object.keys(data[0]) : [];
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Provide Recipient Data</h2>
-        <p className="text-slate-500 mt-1">
-          Choose how you want to provide the names and details.
-        </p>
+        <p className="text-sm font-semibold text-primary">STEP 2 OF 6</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Add your recipients</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Import a spreadsheet or paste names. You can review the rows before continuing.</p>
       </div>
 
-      <Tabs defaultValue="bulk" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="excel" className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4" />
-            Excel / CSV
+      <Tabs defaultValue="spreadsheet" className="w-full">
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl bg-muted p-1">
+          <TabsTrigger value="spreadsheet" className="gap-2 rounded-lg py-2.5 text-xs sm:text-sm">
+            <FileSpreadsheet className="size-4" />Excel / CSV
           </TabsTrigger>
-          <TabsTrigger value="bulk" className="flex items-center gap-2">
-            <ListPlus className="h-4 w-4" />
-            Bulk Paste
+          <TabsTrigger value="manual" className="gap-2 rounded-lg py-2.5 text-xs sm:text-sm">
+            <ListPlus className="size-4" />Paste names
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="excel" className="space-y-4">
-          <div className={`border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ${
-            excelFileName 
-              ? "border-green-500 bg-green-50/50" 
-              : "border-slate-300 bg-slate-50 hover:border-slate-400"
-          }`}>
+        <TabsContent value="spreadsheet" className="mt-5 space-y-4">
+          <Label htmlFor="recipient-file" className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/20 p-6 text-center transition-colors hover:border-primary/50 hover:bg-primary/[0.02]">
             {excelFileName ? (
-              <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
-                <div className="bg-green-100 p-4 rounded-full mb-4 shadow-sm">
-                  <CheckCircle2 className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="flex items-center space-x-3 bg-white px-6 py-3 rounded-xl shadow-sm border border-green-200">
-                  <FileSpreadsheet className="h-6 w-6 text-green-600" />
-                  <span className="font-semibold text-green-900">{excelFileName}</span>
-                </div>
-                <p className="text-sm font-medium text-green-700 mt-4">Spreadsheet successfully loaded!</p>
-                <div className="mt-6 flex items-center gap-3">
-                  <Label htmlFor="excel-upload-replace" className="cursor-pointer">
-                    <div className="px-4 py-2 border border-slate-200 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
-                      Replace file
-                    </div>
-                    <Input
-                      id="excel-upload-replace"
-                      type="file"
-                      accept=".xlsx, .csv"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                  </Label>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      setExcelFileName(null);
-                      setData([]);
-                    }}
-                    className="text-slate-600 hover:text-red-600 hover:bg-red-50 border-slate-200"
-                  >
-                    <X className="h-4 w-4 mr-2" /> Remove
-                  </Button>
-                </div>
-              </div>
+              <>
+                <span className="mb-3 flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-6" /></span>
+                <span className="max-w-full break-all font-semibold text-foreground">{excelFileName}</span>
+                <span className="mt-1 text-sm text-muted-foreground">{data.length.toLocaleString()} recipients imported</span>
+                <span className="mt-3 text-xs font-medium text-primary">Choose a different file</span>
+              </>
             ) : (
-              <Label htmlFor="excel-upload" className="cursor-pointer block w-full h-full">
-                <div className="flex flex-col items-center">
-                  <div className="bg-blue-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                    <FileSpreadsheet className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <span className="text-lg font-medium text-slate-700">Click to upload spreadsheet</span>
-                  <span className="text-sm text-slate-500 mt-1">Supports .xlsx and .csv</span>
-                </div>
-                <Input
-                  id="excel-upload"
-                  type="file"
-                  accept=".xlsx, .csv"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </Label>
+              <>
+                <span className="mb-3 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary"><UploadCloud className="size-6" /></span>
+                <span className="font-semibold text-foreground">{isImporting ? "Importing spreadsheet…" : "Choose an Excel or CSV file"}</span>
+                <span className="mt-1 text-sm text-muted-foreground">First row must contain unique column names · Up to 10 MB</span>
+                <span className="mt-4 rounded-full bg-background px-3 py-1.5 text-xs font-medium text-primary shadow-sm">Browse files</span>
+              </>
             )}
-          </div>
+            <Input id="recipient-file" type="file" accept=".xlsx,.csv" className="sr-only" onChange={handleFileUpload} disabled={isImporting} />
+          </Label>
         </TabsContent>
 
-        <TabsContent value="bulk" className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <TabsContent value="manual" className="mt-5 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Event Name (Optional)</Label>
-              <Input
-                placeholder="e.g. ICT Seminar"
-                value={sharedEvent}
-                onChange={(e) => setSharedEvent(e.target.value)}
-              />
+              <Label htmlFor="shared-event">Event name <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input id="shared-event" placeholder="e.g. ICT Seminar" value={sharedEvent} onChange={(event) => setSharedEvent(event.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Date (Optional)</Label>
-              <Input
-                placeholder="e.g. June 18, 2026"
-                value={sharedDate}
-                onChange={(e) => setSharedDate(e.target.value)}
-              />
+              <Label htmlFor="shared-date">Event date <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <Input id="shared-date" placeholder="e.g. November 11, 2026" value={sharedDate} onChange={(event) => setSharedDate(event.target.value)} />
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Recipient Names (one per line)</Label>
+            <Label htmlFor="bulk-recipient-names">Recipient names <span className="font-normal text-muted-foreground">(one per line)</span></Label>
             <textarea
-              className="w-full min-h-[200px] p-3 rounded-md border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              placeholder="Juan Dela Cruz&#10;Maria Santos&#10;Pedro Reyes"
+              id="bulk-recipient-names"
+              className="min-h-48 w-full resize-y rounded-xl border border-input bg-background px-3 py-3 text-sm shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20"
+              placeholder={"Juan Dela Cruz\nMaria Santos\nPedro Reyes"}
               value={bulkNames}
-              onChange={(e) => setBulkNames(e.target.value)}
+              onChange={(event) => setBulkNames(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">Blank lines are ignored. Up to 1,000 recipients per batch.</p>
           </div>
-          <Button onClick={handleBulkSubmit} variant="outline" className="w-full">
-            Apply Names
-          </Button>
+          <Button variant="outline" onClick={handleBulkSubmit} className="w-full">Apply recipient names</Button>
         </TabsContent>
       </Tabs>
 
       {data.length > 0 && (
-        <div className="mt-8 border rounded-lg overflow-hidden">
-          <div className="bg-slate-50 p-3 border-b flex justify-between items-center rounded-t-lg">
-            <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs">{data.length}</span>
-              Preview
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => { setData([]); setExcelFileName(null); }} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear All
+        <section className="overflow-hidden rounded-2xl border" aria-label="Recipient data preview">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 p-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Users className="size-4" /></span>
+              <div>
+                <p className="text-sm font-semibold">{data.length.toLocaleString()} recipients ready</p>
+                <p className="text-xs text-muted-foreground">{columns.length} data columns · Review before mapping</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={clearData} className="text-muted-foreground hover:text-destructive">
+              <Trash2 className="mr-2 size-4" />Clear data
             </Button>
           </div>
-          <div className="max-h-[300px] overflow-auto">
-            <Table>
+          <div className="max-h-80 overflow-auto overscroll-x-contain">
+            <Table className="min-w-max">
               <TableHeader>
                 <TableRow>
-                  {Object.keys(data[0]).map((key) => (
-                    <TableHead key={key}>{key}</TableHead>
-                  ))}
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-14">#</TableHead>
+                  {columns.map((column) => <TableHead key={column} className="whitespace-nowrap">{column}</TableHead>)}
+                  <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((row, i) => (
-                  <TableRow key={i}>
-                    {Object.values(row).map((val, j) => (
-                      <TableCell key={j}>{val}</TableCell>
+                {data.map((row, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="text-xs tabular-nums text-muted-foreground">{index + 1}</TableCell>
+                    {columns.map((column) => (
+                      <TableCell key={column} className="min-w-36 max-w-64">
+                        {editingIndex === index ? (
+                          <Input
+                            aria-label={`Edit ${column} for recipient ${index + 1}`}
+                            value={String(row[column] ?? "")}
+                            onChange={(event) => updateCell(index, column, event.target.value)}
+                            className="h-9 min-w-32"
+                          />
+                        ) : (
+                          <span className="block truncate">{row[column] ?? ""}</span>
+                        )}
+                      </TableCell>
                     ))}
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeRow(i)}>
-                        <Trash2 className="h-4 w-4 text-slate-400" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={editingIndex === index ? `Finish editing recipient row ${index + 1}` : `Edit recipient row ${index + 1}`}
+                          onClick={() => setEditingIndex((current) => current === index ? null : index)}
+                        >
+                          {editingIndex === index ? <Check className="size-4 text-emerald-600" /> : <Pencil className="size-4 text-muted-foreground" />}
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" aria-label={`Remove recipient row ${index + 1}`} onClick={() => removeRow(index)}>
+                          <Trash2 className="size-4 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        </div>
+          {data.length > 10 && <p className="border-t bg-muted/20 px-4 py-2 text-xs text-muted-foreground">Showing all rows in a scrollable preview.</p>}
+        </section>
       )}
 
-      <div className="flex justify-between items-center pt-6">
-        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <Button
-          onClick={() => onDataReady(data)}
-          disabled={data.length === 0}
-          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-        >
-          Continue
-          <ArrowRight className="h-4 w-4" />
+      <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to template</Button>
+        <Button className="w-full sm:w-auto" onClick={() => onDataReady(data)} disabled={data.length === 0 || isImporting}>
+          Continue with {data.length.toLocaleString()} recipients<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
     </div>
