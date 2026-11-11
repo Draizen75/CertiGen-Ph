@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Toaster } from "@/components/ui/sonner";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
+import { SamplePackDownload } from "@/components/sample-pack-download";
 import { ArrowRight, FileSpreadsheet, FileText, ShieldCheck, Sparkles, Download, CheckCircle2 } from "lucide-react";
 
 const benefits = [
@@ -123,11 +124,39 @@ export default function Home() {
                   <p className="mt-1 font-serif text-lg font-bold italic text-primary">Maria Santos</p>
                 </div>
               </div>
-              <p className="mt-4 text-xs leading-5 text-muted-foreground">Use matching field names in your template and recipient spreadsheet. You can map the fields in the generator before creating your documents.</p>
-              <Link href="/generator" className="mt-5 inline-flex items-center text-sm font-semibold text-primary hover:underline">
-                Try it with your own template <ArrowRight className="ml-1.5 size-4" />
-              </Link>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">The sample pack includes a real editable Word template with {{NAME}}, {{EVENT}}, {{DATE}}, and {{ORGANIZER}} placeholders, plus a CSV containing three fictional recipients.</p>
+              <div className="mt-5 flex flex-col items-start gap-3">
+                <SamplePackDownload />
+                <Link href="/generator" className="inline-flex items-center text-sm font-semibold text-primary hover:underline">
+                  Open the generator <ArrowRight className="ml-1.5 size-4" />
+                </Link>
+              </div>
             </div>
+          </div>
+          <div className="mt-8 rounded-2xl border bg-muted/30 p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><FileArchive className="size-5" /></span>
+              <div>
+                <h3 className="font-semibold">Try the complete workflow with sample files</h3>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">Download the sample pack, then use it in the actual generator. You will go through template upload, recipient import, field mapping, output settings, review, generation, and download—just like a real batch.</p>
+              </div>
+            </div>
+            <ol className="mt-5 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                "Download the sample DOCX and CSV pack",
+                "Upload the Word template",
+                "Import the three sample recipients",
+                "Map all four matching fields",
+                "Choose combined DOCX or separate ZIP",
+                "Review, generate, and download",
+              ].map((item, index) => (
+                <li key={item} className="flex items-start gap-2 rounded-xl border bg-card p-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">{index + 1}</span>
+                  <span className="text-muted-foreground">{item}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-4 text-xs text-muted-foreground">The final DOCX or ZIP is produced by CertiGen's real generation engine, not a static preview. All sample recipient details are fictional.</p>
           </div>
           <div className="mt-9 grid gap-4 md:grid-cols-3">
             {steps.map(({ number, icon: Icon, title, detail }) => (
