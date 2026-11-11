@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, FileText, FileArchive } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, FileArchive, Users, LockKeyhole } from "lucide-react";
 import { OutputMode } from "@/lib/types";
 
 interface Props {
@@ -16,70 +16,65 @@ interface Props {
 export function Options({ recipientsCount, onBack, onGenerate }: Props) {
   const [outputMode, setOutputMode] = useState<OutputMode>("COMBINED_DOCX");
 
+  const options = [
+    {
+      value: "COMBINED_DOCX" as const,
+      title: "One combined Word file",
+      description: "All certificates in one DOCX, separated for convenient printing.",
+      icon: FileText,
+      note: "Best for printing",
+    },
+    {
+      value: "SEPARATE_DOCX" as const,
+      title: "Individual Word files",
+      description: "A ZIP archive with one editable DOCX per recipient.",
+      icon: FileArchive,
+      note: "Best for sharing",
+    },
+  ];
+
   return (
-    <div className="space-y-8 max-w-2xl mx-auto py-8">
+    <div className="mx-auto max-w-2xl space-y-7 py-2 sm:py-4">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-slate-900">Output Options</h2>
-        <p className="text-slate-500 mt-1">
-          Choose how you want to download your certificates.
+        <p className="text-sm font-semibold text-primary">STEP 4 OF 5</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your download format</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Your batch contains {recipientsCount.toLocaleString()} recipients.</p>
+      </div>
+
+      <RadioGroup value={outputMode} onValueChange={(value) => setOutputMode(value as OutputMode)} className="grid gap-3">
+        {options.map(({ value, title, description, icon: Icon, note }) => {
+          const selected = outputMode === value;
+          return (
+            <Label
+              key={value}
+              htmlFor={`output-${value}`}
+              className={`flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-colors sm:p-5 ${selected ? "border-primary bg-primary/[0.04] ring-2 ring-primary/10" : "border-border hover:border-primary/40 hover:bg-muted/30"}`}
+            >
+              <RadioGroupItem value={value} id={`output-${value}`} className="mt-1" />
+              <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                <Icon className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2 font-semibold text-foreground">{title}</span>
+                <span className="mt-1 block text-sm leading-6 text-muted-foreground">{description}</span>
+                <span className="mt-3 inline-flex rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">{note}</span>
+              </span>
+            </Label>
+          );
+        })}
+      </RadioGroup>
+
+      <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-4">
+        <LockKeyhole className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <p className="text-xs leading-5 text-muted-foreground">
+          Generation runs in your browser. Your template and recipient data are not uploaded to a CertiGen server.
         </p>
       </div>
 
-      <div className="space-y-6">
-        <RadioGroup
-          value={outputMode}
-          onValueChange={(val) => setOutputMode(val as OutputMode)}
-          className="grid grid-cols-1 gap-5"
-        >
-          <div className={`relative flex items-start space-x-4 border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 ${outputMode === "COMBINED_DOCX" ? "bg-blue-50/50 border-blue-600 shadow-md scale-[1.02]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
-            <RadioGroupItem value="COMBINED_DOCX" id="mode-combined" className="mt-1 border-slate-300 data-[state=checked]:border-blue-600 data-[state=checked]:text-blue-600" />
-            <Label htmlFor="mode-combined" className="flex-1 cursor-pointer flex flex-col">
-              <span className="flex items-center gap-2 font-bold text-slate-900 text-lg mb-1">
-                <div className={`p-2 rounded-lg ${outputMode === "COMBINED_DOCX" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
-                  <FileText className="h-5 w-5" />
-                </div>
-                Combined Word Document (.docx)
-              </span>
-              <span className="text-sm text-slate-600 leading-relaxed mt-2">
-                Generates a single file containing all <strong>{recipientsCount}</strong> certificates separated by page breaks. Best for easy printing.
-              </span>
-            </Label>
-            {outputMode === "COMBINED_DOCX" && (
-              <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Selected</div>
-            )}
-          </div>
-
-          <div className={`relative flex items-start space-x-4 border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 ${outputMode === "SEPARATE_DOCX" ? "bg-blue-50/50 border-blue-600 shadow-md scale-[1.02]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
-            <RadioGroupItem value="SEPARATE_DOCX" id="mode-separate" className="mt-1 border-slate-300 data-[state=checked]:border-blue-600 data-[state=checked]:text-blue-600" />
-            <Label htmlFor="mode-separate" className="flex-1 cursor-pointer flex flex-col">
-              <span className="flex items-center gap-2 font-bold text-slate-900 text-lg mb-1">
-                <div className={`p-2 rounded-lg ${outputMode === "SEPARATE_DOCX" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
-                  <FileArchive className="h-5 w-5" />
-                </div>
-                Separate Word Documents (ZIP)
-              </span>
-              <span className="text-sm text-slate-600 leading-relaxed mt-2">
-                Generates a ZIP file containing <strong>{recipientsCount}</strong> individual .docx files. Best for emailing to each recipient.
-              </span>
-            </Label>
-            {outputMode === "SEPARATE_DOCX" && (
-              <div className="absolute top-4 right-4 bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Selected</div>
-            )}
-          </div>
-        </RadioGroup>
-      </div>
-
-      <div className="flex justify-between items-center pt-6 border-t">
-        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <Button
-          onClick={() => onGenerate(outputMode)}
-          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-8 py-6 text-lg shadow-md"
-        >
-          <Play className="h-5 w-5 fill-current" />
-          Start Generation
+      <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
+        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to mapping</Button>
+        <Button onClick={() => onGenerate(outputMode)} disabled={recipientsCount === 0}>
+          Generate {recipientsCount.toLocaleString()} certificates<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
     </div>
