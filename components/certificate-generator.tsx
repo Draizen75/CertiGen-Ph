@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Circle } from "lucide-react";
+import { Check } from "lucide-react";
 import { TemplateUpload } from "./steps/template-upload";
 import { DataInput } from "./steps/data-input";
 import { Mapping } from "./steps/mapping";
