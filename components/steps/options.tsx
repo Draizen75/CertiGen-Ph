@@ -72,8 +72,8 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
       </div>
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to mapping</Button>
-        <Button onClick={() => onGenerate(outputMode)} disabled={recipientsCount === 0}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to mapping</Button>
+        <Button className="w-full sm:w-auto" onClick={() => onGenerate(outputMode)} disabled={recipientsCount === 0}>
           Generate {recipientsCount.toLocaleString()} certificates<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
