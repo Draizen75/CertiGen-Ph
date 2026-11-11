@@ -58,7 +58,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
         const docxBuffers: ArrayBuffer[] = [];
         const zip = outputMode === "SEPARATE_DOCX" ? new JSZip() : null;
-        const usedNames = new Map<string, number>();
+        const usedNames = new Set<string>();
         const nameColumn = Object.entries(mapping).find(([placeholder]) => placeholder.toLowerCase() === "name")?.[1];
 
         for (let index = 0; index < recipients.length; index++) {
