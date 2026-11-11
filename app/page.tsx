@@ -211,10 +211,6 @@ export default function Home() {
           </Button>
         </section>
 
-        <footer className="mx-auto mt-12 flex max-w-4xl flex-col items-center justify-between gap-2 border-t pt-6 text-center text-xs text-muted-foreground sm:flex-row">
-          <span>CertiGen PH · Bulk certificates, without the repetitive work.</span>
-          <span>Simple, private, and made for your workflow.</span>
-        </footer>
       </div>
       <Toaster />
     </main>
