@@ -160,8 +160,8 @@ export function DataInput({ onDataReady, onBack }: Props) {
               <Trash2 className="mr-2 size-4" />Clear data
             </Button>
           </div>
-          <div className="max-h-72 overflow-auto">
-            <Table>
+          <div className="max-h-80 overflow-auto overscroll-x-contain">
+            <Table className="min-w-max">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-14">#</TableHead>
@@ -213,8 +213,8 @@ export function DataInput({ onDataReady, onBack }: Props) {
       )}
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to template</Button>
-        <Button onClick={() => onDataReady(data)} disabled={data.length === 0 || isImporting}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to template</Button>
+        <Button className="w-full sm:w-auto" onClick={() => onDataReady(data)} disabled={data.length === 0 || isImporting}>
           Continue with {data.length.toLocaleString()} recipients<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
