@@ -79,6 +79,56 @@ export default function Home() {
             <h2 id="how-title" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">From one template to every recipient</h2>
             <p className="mt-3 text-sm leading-6 text-muted-foreground">No repetitive copy and paste. Set up your certificate once and let CertiGen fill in the recipient details.</p>
           </div>
+          <div className="mt-10 grid items-center gap-8 rounded-3xl border bg-card p-5 shadow-sm sm:p-8 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="mx-auto w-full max-w-xl">
+              <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-semibold uppercase tracking-wider">Sample Word template</span>
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary">Before generation</span>
+              </div>
+              <div className="relative aspect-[1.414/1] overflow-hidden border-[8px] border-double border-amber-700/50 bg-[#fffdf6] p-5 text-center text-slate-800 shadow-md sm:border-[12px] sm:p-8">
+                <div className="pointer-events-none absolute inset-2 border border-amber-700/30 sm:inset-3" />
+                <div className="relative flex h-full flex-col items-center justify-center">
+                  <div className="text-[8px] font-semibold uppercase tracking-[0.28em] text-amber-800 sm:text-[10px]">Certificate of</div>
+                  <div className="mt-1 font-serif text-xl font-bold tracking-wide text-amber-900 sm:text-3xl">Appreciation</div>
+                  <div className="mt-2 h-px w-16 bg-amber-700/60 sm:mt-3 sm:w-24" />
+                  <p className="mt-3 text-[8px] italic text-slate-600 sm:mt-5 sm:text-xs">This certificate is proudly presented to</p>
+                  <p className="mt-2 border-b border-amber-800/50 px-2 pb-1 font-serif text-base font-bold italic text-slate-900 sm:mt-3 sm:px-6 sm:text-2xl">{'{{NAME}}'}</p>
+                  <p className="mt-2 max-w-[85%] text-[7px] leading-relaxed text-slate-600 sm:mt-4 sm:text-[10px]">In recognition of your valuable participation and contribution to</p>
+                  <p className="mt-1 font-semibold text-[8px] text-slate-800 sm:text-xs">{'{{EVENT}}'}</p>
+                  <div className="mt-4 flex w-full justify-around gap-4 sm:mt-7">
+                    <div className="w-1/3 border-t border-slate-400 pt-1 text-[6px] text-slate-500 sm:text-[9px]">Date</div>
+                    <div className="w-1/3 border-t border-slate-400 pt-1 text-[6px] text-slate-500 sm:text-[9px]">Authorized signature</div>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">Example layout only · Placeholders are replaced with each recipient's data</p>
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-semibold text-primary">See the transformation</p>
+              <h3 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">One template. Every name personalized.</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">Create your certificate design once in Microsoft Word, then add placeholders where recipient-specific information should appear.</p>
+              <div className="mt-5 space-y-3 rounded-2xl border bg-muted/40 p-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Template placeholder</p>
+                  <p className="mt-1 font-mono text-sm font-semibold">{'{{NAME}}'}</p>
+                </div>
+                <div className="h-px bg-border" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Example recipient value</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">Maria Santos</p>
+                </div>
+                <div className="h-px bg-border" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Generated result</p>
+                  <p className="mt-1 font-serif text-lg font-bold italic text-primary">Maria Santos</p>
+                </div>
+              </div>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">Use matching field names in your template and recipient spreadsheet. You can map the fields in the generator before creating your documents.</p>
+              <Link href="/generator" className="mt-5 inline-flex items-center text-sm font-semibold text-primary hover:underline">
+                Try it with your own template <ArrowRight className="ml-1.5 size-4" />
+              </Link>
+            </div>
+          </div>
           <div className="mt-9 grid gap-4 md:grid-cols-3">
             {steps.map(({ number, icon: Icon, title, detail }) => (
               <article key={number} className="rounded-2xl border bg-card p-6 shadow-sm">
