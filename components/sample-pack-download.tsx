@@ -23,7 +23,7 @@ function createSampleTemplate() {
         page: {
           size: { orientation: PageOrientation.LANDSCAPE },
           margin: { top: 900, right: 1100, bottom: 900, left: 1100 },
-          borders: { page: { top: border, bottom: border, left: border, right: border } },
+          borders: { top: border, bottom: border, left: border, right: border },
         },
       },
       children: [
