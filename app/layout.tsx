@@ -17,8 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://certigenph.vercel.app"),
   title: "CertiGen PH | Bulk Certificate Generator for Word & Excel",
-  description: "The fastest way to generate certificates in bulk. Upload your Word template (.docx), map placeholders like [NAME], and generate accurate certificates from Excel/CSV data. 100% secure, free, and fast.",
+  description: "Create personalized certificates in bulk using a Word DOCX template and recipient data from Excel or CSV. Review field mappings and download editable Word documents.",
   keywords: ["certificate generator", "bulk certificates", "word template generator", "excel to docx", "mail merge", "certificate automation", "philippines"],
   authors: [{ name: "CertiGen PH" }],
   verification: {
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "CertiGen PH | Bulk Certificate Generator",
-    description: "Generate certificates in bulk from Word templates and Excel data instantly.",
+    description: "Create personalized certificates in bulk from Word templates and Excel or CSV data.",
     url: "https://certigenph.vercel.app", 
     siteName: "CertiGen PH",
     locale: "en_PH",
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "CertiGen PH | Bulk Certificate Generator",
-    description: "Generate certificates in bulk from Word templates and Excel data instantly.",
+    description: "Create personalized certificates in bulk from Word templates and Excel or CSV data.",
   },
 };
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileSpreadsheet, ListPlus, ArrowLeft, ArrowRight, Trash2, CheckCircle2, UploadCloud, Users } from "lucide-react";
+import { FileSpreadsheet, ListPlus, ArrowLeft, ArrowRight, Trash2, CheckCircle2, UploadCloud, Users, Pencil, Check } from "lucide-react";
 import { Recipient } from "@/lib/types";
 import { parseExcelData, parseManualNames } from "@/lib/data-parser";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ export function DataInput({ onDataReady, onBack }: Props) {
   const [sharedEvent, setSharedEvent] = useState("");
   const [sharedDate, setSharedDate] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -63,7 +64,15 @@ export function DataInput({ onDataReady, onBack }: Props) {
     }
   };
 
-  const removeRow = (index: number) => setData((current) => current.filter((_, rowIndex) => rowIndex !== index));
+  const updateCell = (rowIndex: number, column: string, value: string) => {
+    setData((current) => current.map((row, index) => (
+      index === rowIndex ? { ...row, [column]: value } : row
+    )));
+  };
+  const removeRow = (index: number) => {
+    setData((current) => current.filter((_, rowIndex) => rowIndex !== index));
+    setEditingIndex((current) => current === index ? null : current !== null && current > index ? current - 1 : current);
+  };
   const clearData = () => {
     setData([]);
     setExcelFileName(null);
@@ -163,11 +172,35 @@ export function DataInput({ onDataReady, onBack }: Props) {
                 {data.map((row, index) => (
                   <TableRow key={index}>
                     <TableCell className="text-xs tabular-nums text-muted-foreground">{index + 1}</TableCell>
-                    {columns.map((column) => <TableCell key={column} className="max-w-56 truncate">{row[column] ?? ""}</TableCell>)}
+                    {columns.map((column) => (
+                      <TableCell key={column} className="min-w-36 max-w-64">
+                        {editingIndex === index ? (
+                          <Input
+                            aria-label={`Edit ${column} for recipient ${index + 1}`}
+                            value={String(row[column] ?? "")}
+                            onChange={(event) => updateCell(index, column, event.target.value)}
+                            className="h-9 min-w-32"
+                          />
+                        ) : (
+                          <span className="block truncate">{row[column] ?? ""}</span>
+                        )}
+                      </TableCell>
+                    ))}
                     <TableCell>
-                      <Button type="button" variant="ghost" size="icon" aria-label={`Remove recipient row ${index + 1}`} onClick={() => removeRow(index)}>
-                        <Trash2 className="size-4 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={editingIndex === index ? `Finish editing recipient row ${index + 1}` : `Edit recipient row ${index + 1}`}
+                          onClick={() => setEditingIndex((current) => current === index ? null : index)}
+                        >
+                          {editingIndex === index ? <Check className="size-4 text-emerald-600" /> : <Pencil className="size-4 text-muted-foreground" />}
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" aria-label={`Remove recipient row ${index + 1}`} onClick={() => removeRow(index)}>
+                          <Trash2 className="size-4 text-muted-foreground" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

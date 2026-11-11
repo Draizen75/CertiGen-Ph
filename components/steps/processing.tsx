@@ -38,6 +38,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [status, setStatus] = useState<"processing" | "completed" | "error">("processing");
   const [error, setError] = useState<string | null>(null);
   const [finalBlob, setFinalBlob] = useState<Blob | null>(null);
+  const [generationAttempt, setGenerationAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,7 +127,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
     return () => {
       cancelled = true;
     };
-  }, [templateFile, recipients, mapping, delimiters, outputMode]);
+  }, [templateFile, recipients, mapping, delimiters, outputMode, generationAttempt]);
 
   const isCombined = outputMode === "COMBINED_DOCX";
 
@@ -179,11 +180,16 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       </div>
 
       {status === "error" && (
+        <div className="space-y-3">
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>Generation error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+        <Button onClick={() => setGenerationAttempt((attempt) => attempt + 1)} className="w-full sm:w-auto">
+          Try generating again
+        </Button>
+        </div>
       )}
 
       {status === "completed" && finalBlob && (

@@ -48,6 +48,46 @@ export default function Home() {
           <CertificateGenerator />
         </section>
 
+        <section className="mx-auto mt-14 max-w-4xl" aria-labelledby="how-it-works">
+          <div className="text-center">
+            <p className="text-sm font-semibold text-primary">A simpler certificate workflow</p>
+            <h2 id="how-it-works" className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">From Word template to finished certificates</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Keep your existing certificate design. CertiGen fills its merge fields with recipient information from a spreadsheet or a pasted list.</p>
+          </div>
+          <div className="mt-7 grid gap-4 sm:grid-cols-3">
+            {[
+              { number: "01", title: "Upload a DOCX", detail: "Choose a Word certificate with placeholders such as {{NAME}}." },
+              { number: "02", title: "Add recipient data", detail: "Import Excel or CSV, or paste names and review the rows." },
+              { number: "03", title: "Generate and download", detail: "Map each field, confirm the values, and download DOCX files." },
+            ].map((item) => (
+              <article key={item.number} className="rounded-2xl border bg-card p-5">
+                <span className="text-xs font-bold tracking-widest text-primary">{item.number}</span>
+                <h3 className="mt-3 font-semibold">{item.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.detail}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto mt-14 max-w-4xl" aria-labelledby="faq-title">
+          <div className="text-center">
+            <h2 id="faq-title" className="text-2xl font-bold tracking-tight">Frequently asked questions</h2>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {[
+              { question: "What files can I upload?", answer: "Use a DOCX Word template and recipient data from an XLSX or CSV file. You can also paste names manually." },
+              { question: "Are my files uploaded to a server?", answer: "The current generation workflow runs in your browser. Your template and recipient data are processed locally for this session." },
+              { question: "Can I create separate certificates?", answer: "Yes. Download one combined Word document or a ZIP archive containing an individual DOCX file for each recipient." },
+              { question: "Can I edit the certificates afterward?", answer: "Yes. Generated files are editable Word documents, so you can make final adjustments in Microsoft Word or a compatible editor." },
+            ].map((item) => (
+              <article key={item.question} className="rounded-xl border bg-card p-4">
+                <h3 className="text-sm font-semibold">{item.question}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.answer}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <footer className="mx-auto mt-8 flex max-w-3xl flex-col items-center gap-2 text-center text-xs text-muted-foreground sm:flex-row sm:justify-between">
           <span>CertiGen PH · Bulk certificates, without the repetitive work.</span>
           <span>Your files stay on your device during generation.</span>

@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CertiGen PH
 
-## Getting Started
+CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, review the personalized values, and download editable DOCX output.
 
-First, run the development server:
+## Features
+
+- DOCX templates with supported merge-field delimiters: `{{FIELD}}`, `[FIELD]`, `<FIELD>`, and `«FIELD»`.
+- XLSX and CSV import, plus manual recipient entry.
+- Recipient-row review and inline editing before field mapping.
+- Conservative exact-name field auto-mapping with manual overrides.
+- Pre-generation recipient/value review and blank-value warnings.
+- Combined DOCX output or one DOCX per recipient in a ZIP archive.
+- Local browser-side processing; no account is required for the current workflow.
+- Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
+
+## Requirements
+
+- Node.js 20 or later
+- npm
+
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Validation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Before releasing a change, manually test:
+- A DOCX template with multiple placeholders and formatting.
+- XLSX and CSV imports, empty files, duplicate/missing headers, and malformed files.
+- Manual names, inline edits, duplicate recipient names, and blank mapped values.
+- Combined DOCX and separate ZIP generation.
+- Navigation away during generation, retry after an error, and a batch near the 1,000-recipient limit.
 
-To learn more about Next.js, take a look at the following resources:
+## Preview limitation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The review step previews the actual recipient values that will be merged into each placeholder. It is not a pixel-accurate rendering of the Word page. Open a downloaded DOCX in Microsoft Word or a compatible editor to verify fonts, images, spacing, and page layout.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Product direction
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The current release intentionally keeps the core workflow account-free and browser-based. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.

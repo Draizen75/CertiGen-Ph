@@ -3,6 +3,8 @@ import { Recipient } from "./types";
 
 export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 export const MAX_RECIPIENTS = 1000;
+export const MAX_COLUMNS = 50;
+const MAX_WORKSHEET_ROWS = 50000;
 
 function validateFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase();
@@ -34,10 +36,17 @@ export async function parseExcelData(file: File): Promise<Recipient[]> {
     throw new Error("No worksheet data was found in this file.");
   }
 
+  if (worksheet.rowCount > MAX_WORKSHEET_ROWS) {
+    throw new Error("This spreadsheet has too many rows to inspect safely. Split it into smaller files and retry.");
+  }
+
   const headerRow = worksheet.getRow(1);
   const headers: string[] = [];
   const seen = new Set<string>();
   const columnCount = Math.max(headerRow.cellCount, headerRow.actualCellCount);
+  if (columnCount > MAX_COLUMNS) {
+    throw new Error(`This spreadsheet has more than ${MAX_COLUMNS} columns. Remove unused columns and retry.`);
+  }
 
   for (let column = 1; column <= columnCount; column++) {
     const header = String(headerRow.getCell(column).text ?? "").trim();

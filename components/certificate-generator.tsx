@@ -8,15 +8,17 @@ import { DataInput } from "./steps/data-input";
 import { Mapping } from "./steps/mapping";
 import { Options } from "./steps/options";
 import { Processing } from "./steps/processing";
+import { Review } from "./steps/review";
 import { Recipient, OutputMode } from "@/lib/types";
 
-export type Step = "template" | "data" | "mapping" | "options" | "processing";
+export type Step = "template" | "data" | "mapping" | "options" | "review" | "processing";
 
 const steps: { id: Step; label: string; shortLabel: string }[] = [
   { id: "template", label: "Template", shortLabel: "Template" },
   { id: "data", label: "Recipient data", shortLabel: "Data" },
   { id: "mapping", label: "Field mapping", shortLabel: "Mapping" },
   { id: "options", label: "Output options", shortLabel: "Options" },
+  { id: "review", label: "Review", shortLabel: "Review" },
   { id: "processing", label: "Generate", shortLabel: "Generate" },
 ];
 
@@ -112,6 +114,18 @@ export function CertificateGenerator() {
                 setOutputMode(mode);
                 nextStep();
               }}
+            />
+          )}
+
+          {currentStep === "review" && (
+            <Review
+              recipients={recipients}
+              mapping={mapping}
+              placeholders={placeholders}
+              delimiters={delimiters}
+              outputMode={outputMode}
+              onBack={prevStep}
+              onGenerate={nextStep}
             />
           )}
 
