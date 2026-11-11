@@ -78,11 +78,14 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           } else if (zip) {
             const recipientName = nameColumn ? String(recipient[nameColumn] ?? "") : "";
             const baseName = safeFileName(recipientName, \`certificate_\${index + 1}\`);
-            const normalized = baseName.toLocaleLowerCase();
-            const duplicateCount = (usedNames.get(normalized) ?? 0) + 1;
-            usedNames.set(normalized, duplicateCount);
-            const uniqueName = duplicateCount === 1 ? baseName : \`\${baseName}_\${duplicateCount}\`;
-            zip.file(\`\${uniqueName}.docx\`, docxBuffer);
+            let uniqueName = baseName;
+            let suffix = 2;
+            while (usedNames.has(uniqueName.toLocaleLowerCase())) {
+              uniqueName = baseName + "_" + suffix;
+              suffix += 1;
+            }
+            usedNames.add(uniqueName.toLocaleLowerCase());
+            zip.file(uniqueName + ".docx", docxBuffer);
           }
 
           setProcessed(index + 1);
