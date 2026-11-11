@@ -44,7 +44,14 @@ export function CertificateGenerator() {
   return (
     <div className="space-y-7 sm:space-y-9">
       <nav aria-label="Certificate generation steps" className="mx-auto max-w-4xl">
-        <ol className="grid grid-cols-6 gap-1 sm:gap-3">
+        <div className="mb-3 flex items-center justify-between gap-3 sm:hidden">
+          <span className="text-xs font-semibold text-primary">STEP {currentStepIndex + 1} OF {steps.length}</span>
+          <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{steps[currentStepIndex]?.label}</span>
+        </div>
+        <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-muted sm:hidden" role="progressbar" aria-label="Workflow progress" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={currentStepIndex + 1}>
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }} />
+        </div>
+        <ol className="hidden grid-cols-6 gap-1 sm:grid sm:gap-3">
           {steps.map((step, index) => {
             const isComplete = index < currentStepIndex;
             const isCurrent = index === currentStepIndex;
