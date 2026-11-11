@@ -186,7 +186,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           <AlertTitle>Generation error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button onClick={() => setGenerationAttempt((attempt) => attempt + 1)} className="w-full sm:w-auto">
+        <Button className="w-full sm:w-auto" onClick={() => setGenerationAttempt((attempt) => attempt + 1)} className="w-full sm:w-auto">
           Try generating again
         </Button>
         </div>
@@ -214,12 +214,12 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
         {status === "processing" ? (
-          <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Cancel generation</Button>
+          <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Cancel generation</Button>
         ) : (
-          <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />{status === "error" ? "Review settings" : "Change output"}</Button>
+          <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />{status === "error" ? "Review settings" : "Change output"}</Button>
         )}
         {status === "completed" && (
-          <Button variant="ghost" onClick={() => window.location.reload()}>Start a new batch</Button>
+          <Button className="w-full sm:w-auto" variant="ghost" onClick={() => window.location.reload()}>Start a new batch</Button>
         )}
       </div>
     </div>
