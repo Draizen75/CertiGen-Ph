@@ -102,8 +102,8 @@ export function Mapping({ placeholders, delimiters, columns, onMappingComplete, 
       )}
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back</Button>
-        <Button onClick={() => onMappingComplete(mapping)} disabled={unmapped.length > 0}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back</Button>
+        <Button className="w-full sm:w-auto" onClick={() => onMappingComplete(mapping)} disabled={unmapped.length > 0}>
           Review output options<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
