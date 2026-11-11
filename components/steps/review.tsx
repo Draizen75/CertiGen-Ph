@@ -128,8 +128,8 @@ export function Review({ recipients, mapping, placeholders, delimiters, outputMo
       </section>
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
-        <Button variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to output options</Button>
-        <Button onClick={onGenerate}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Back to output options</Button>
+        <Button className="w-full sm:w-auto" onClick={onGenerate}>
           Generate {recipients.length.toLocaleString()} certificates<ArrowRight className="ml-2 size-4" />
         </Button>
       </div>
