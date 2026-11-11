@@ -23,7 +23,7 @@ interface Props {
 function safeFileName(value: string, fallback: string) {
   const cleaned = value
     .normalize("NFKC")
-    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+    .replace(/[<>:"\/\\|?*\u0000-\u001F]/g, " ")
     .replace(/[. ]+$/g, "")
     .replace(/\s+/g, " ")
     .trim()
@@ -77,12 +77,12 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
             docxBuffers.push(docxBuffer);
           } else if (zip) {
             const recipientName = nameColumn ? String(recipient[nameColumn] ?? "") : "";
-            const baseName = safeFileName(recipientName, `certificate_${index + 1}`);
+            const baseName = safeFileName(recipientName, \`certificate_\${index + 1}\`);
             const normalized = baseName.toLocaleLowerCase();
             const duplicateCount = (usedNames.get(normalized) ?? 0) + 1;
             usedNames.set(normalized, duplicateCount);
-            const uniqueName = duplicateCount === 1 ? baseName : `${baseName}_${duplicateCount}`;
-            zip.file(`${uniqueName}.docx`, docxBuffer);
+            const uniqueName = duplicateCount === 1 ? baseName : \`\${baseName}_\${duplicateCount}\`;
+            zip.file(\`\${uniqueName}.docx\`, docxBuffer);
           }
 
           setProcessed(index + 1);
@@ -110,7 +110,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         setFinalBlob(output);
         setProgress(100);
         setStatus("completed");
-        toast.success(`Generated ${recipients.length.toLocaleString()} certificates successfully.`);
+        toast.success(\`Generated \${recipients.length.toLocaleString()} certificates successfully.\`);
       } catch (generationError) {
         if (cancelled) return;
         setStatus("error");
@@ -168,9 +168,9 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         <Progress value={progress} className="h-2.5" />
         <p className="text-xs text-muted-foreground">
           {status === "processing"
-            ? `Processed ${processed.toLocaleString()} of ${recipients.length.toLocaleString()} recipients`
+            ? \`Processed \${processed.toLocaleString()} of \${recipients.length.toLocaleString()} recipients\`
             : status === "completed"
-              ? `${recipients.length.toLocaleString()} certificates generated`
+              ? \`\${recipients.length.toLocaleString()} certificates generated\`
               : "Generation stopped before a download was created."}
         </p>
       </div>
@@ -190,7 +190,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           </div>
           <p className="font-semibold">{isCombined ? "Combined Word document" : "Individual Word documents"}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isCombined ? "One DOCX file with all certificates." : `A ZIP archive containing ${recipients.length.toLocaleString()} DOCX files.`}
+            {isCombined ? "One DOCX file with all certificates." : \`A ZIP archive containing \${recipients.length.toLocaleString()} DOCX files.\`}
           </p>
           <Button
             size="lg"
