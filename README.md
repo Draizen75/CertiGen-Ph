@@ -36,7 +36,7 @@ npm run lint
 npm run build
 ```
 
-Set `GOTENBERG_URL` in `.env.local` to a private or trusted Gotenberg instance. In production, configure the same variable in the hosting environment. Do not expose an unauthenticated converter publicly; it receives documents containing recipient information. The conversion endpoint accepts DOCX files up to 4 MB per recipient.
+Set `GOTENBERG_URL` in `.env.local` to a private or trusted Gotenberg 9 instance. In production, configure it in the hosting environment. If the service uses HTTP Basic Auth, also set `GOTENBERG_USERNAME` and `GOTENBERG_PASSWORD`; both must be set together. Never expose these as `NEXT_PUBLIC_` variables. Enable Gotenberg Basic Auth with `API_ENABLE_BASIC_AUTH=true`, `GOTENBERG_API_BASIC_AUTH_USERNAME`, and `GOTENBERG_API_BASIC_AUTH_PASSWORD` on the converter service. Do not expose an unauthenticated converter publicly; it receives documents containing recipient information. The conversion endpoint accepts DOCX files up to 4 MB per recipient.
 
 Before releasing a change, manually test:
 - A DOCX template with multiple placeholders and formatting.
