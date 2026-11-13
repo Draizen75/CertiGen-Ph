@@ -78,6 +78,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       try {
         if (!recipients.length) throw new Error("There are no recipients to generate.");
         if (!Object.keys(mapping).length) throw new Error("No template fields have been mapped.");
+        const readiness = await fetch("/api/convert", { cache: "no-store" });
+        const readinessResult = await readiness.json().catch(() => null);
+        if (!readiness.ok || !readinessResult?.ready) {
+          throw new Error(readinessResult?.error || "The PDF conversion service is unavailable. Check the deployment configuration.");
+        }
         const templateBuffer = await templateFile.arrayBuffer();
 
 
@@ -107,7 +112,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
         if (cancelled) return;
       } catch (error) {
-        if (!cancelled) setBatchError(error instanceof Error ? error.message : "Batch generation failed.");
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "Batch generation failed.";
+          setBatchError(message);
+          setCertificates((current) => current.map((item) => ({ ...item, status: "error", error: message })));
+        }
       } finally {
         if (!cancelled) setIsGenerating(false);
       }
