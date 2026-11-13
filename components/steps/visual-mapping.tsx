@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,7 +80,7 @@ export function VisualMapping({ background, columns, sampleRecipients, onComplet
             <Button size="sm" variant="outline" onClick={addField}><Plus className="mr-2 size-4" />Add text field</Button>
           </div>
           <div className="overflow-auto">
-            <div ref={stageRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} onPointerLeave={stopDrag}
+            <div ref={stageRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag}
               className="relative mx-auto w-full touch-none select-none overflow-hidden bg-white shadow-sm" style={{ aspectRatio: `${background.width} / ${background.height}`, maxWidth: "100%", containerType: "inline-size" }}>
               <img src={background.dataUrl} alt="Certificate template background" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-fill" />
               {fields.map((field) => {
