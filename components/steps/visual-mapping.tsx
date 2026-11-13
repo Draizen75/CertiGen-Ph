@@ -25,7 +25,6 @@ export function VisualMapping({ background, columns, sampleRecipients, initialFi
   const [selectedId, setSelectedId] = useState(fields[0]?.id ?? "");
   const [previewIndex, setPreviewIndex] = useState(0);
   const previewRecipient = sampleRecipients[previewIndex] ?? {};
-  const [stageWidth, setStageWidth] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState>(null);
   const selected = fields.find((field) => field.id === selectedId) ?? fields[0];
