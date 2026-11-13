@@ -64,7 +64,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [editedRecipient, setEditedRecipient] = useState<Recipient>({});
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [combinedDocx, setCombinedDocx] = useState<Blob | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +79,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         if (!recipients.length) throw new Error("There are no recipients to generate.");
         if (!Object.keys(mapping).length) throw new Error("No template fields have been mapped.");
         const templateBuffer = await templateFile.arrayBuffer();
-        const generatedBuffers: ArrayBuffer[] = [];
+
 
         for (let index = 0; index < recipients.length; index++) {
           if (cancelled) return;
@@ -93,7 +93,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
             const name = safeFileName(recipientName(recipient, mapping, index), `certificate_${index + 1}`);
             const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
             if (cancelled) return;
-            generatedBuffers.push(buffer);
             setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
               ? { ...item, docx: docxBlob, pdf: pdfBlob, status: "ready" }
               : item));
@@ -107,9 +106,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         }
 
         if (cancelled) return;
-        if (outputMode === "COMBINED_DOCX" && generatedBuffers.length === recipients.length) {
-          setCombinedDocx(await mergeDocxBuffers(generatedBuffers));
-        }
       } catch (error) {
         if (!cancelled) setBatchError(error instanceof Error ? error.message : "Batch generation failed.");
       } finally {
@@ -134,6 +130,13 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   }, [selectedIndex, certificates.length, selected?.recipient]);
 
   const editableFields = useMemo(() => Object.entries(mapping), [mapping]);
+
+  useEffect(() => {
+    if (!selected?.pdf) { setPdfUrl(null); return; }
+    const url = URL.createObjectURL(selected.pdf);
+    setPdfUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selected?.pdf]);
 
   async function regenerateSelected() {
     if (!selected) return;
@@ -176,7 +179,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       zip.file(`${name}.pdf`, item.pdf!);
       if (outputMode === "SEPARATE_DOCX") zip.file(`${name}.docx`, item.docx!);
     }
-    if (outputMode === "COMBINED_DOCX" && combinedDocx) zip.file("certificates_combined.docx", combinedDocx);
+    if (outputMode === "COMBINED_DOCX") {
+      const buffers = await Promise.all(certificates.map((item) => item.docx!.arrayBuffer()));
+      const combined = await mergeDocxBuffers(buffers);
+      zip.file("certificates_combined.docx", combined);
+    }
     const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
     saveAs(archive, "certigen-approved-certificates.zip");
   }
@@ -249,7 +256,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           {selected.status === "ready" && selected.pdf && (
             <>
               <div className="bg-muted/50 p-2 sm:p-4">
-                <iframe title={`PDF certificate for ${recipientName(selected.recipient, mapping, selectedIndex)}`} src={URL.createObjectURL(selected.pdf)} className="h-[65vh] min-h-[480px] w-full rounded-lg border bg-white" />
+                <iframe title={`PDF certificate for ${recipientName(selected.recipient, mapping, selectedIndex)}`} src={pdfUrl ?? undefined} className="h-[65vh] min-h-[480px] w-full rounded-lg border bg-white" />
               </div>
               <div className="grid gap-4 border-t p-4 lg:grid-cols-[1fr_1.2fr]">
                 <div className="space-y-3">
