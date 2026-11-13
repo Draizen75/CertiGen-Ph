@@ -18,7 +18,7 @@ export function Options({ recipientsCount, templateKind, onBack, onGenerate }: P
   const isVisual = templateKind !== "docx";
   const [outputMode, setOutputMode] = useState<OutputMode>(isVisual ? "PNG_ZIP" : "COMBINED_DOCX");
   const options = isVisual ? [
-    { value: "PNG_ZIP" as const, title: "Individual PNG certificates", description: "A ZIP archive with one high-resolution PNG certificate for each recipient.", icon: ImageIcon, note: "No conversion service required" },
+    { value: "PNG_ZIP" as const, title: "PNG certificates + combined PDF", description: "A ZIP archive with one high-resolution PNG per recipient and a combined multi-page PDF made from those same rendered certificates.", icon: ImageIcon, note: "No conversion service required" },
   ] : [
     { value: "COMBINED_DOCX" as const, title: "One combined Word document", description: "All personalized certificates in one editable Word document.", icon: FileText, note: "Best for printing" },
     { value: "SEPARATE_DOCX" as const, title: "Individual Word documents", description: "A ZIP archive containing one editable Word document per recipient.", icon: FileArchive, note: "Best for sharing" },
