@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,6 +26,7 @@ type Certificate = {
   recipient: Recipient;
   docx: Blob | null;
   pdf: Blob | null;
+  pdfUrl: string | null;
   status: "generating" | "ready" | "error";
   error?: string;
   reviewed: boolean;
@@ -62,9 +63,9 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [isGenerating, setIsGenerating] = useState(true);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [editedRecipient, setEditedRecipient] = useState<Recipient>({});
+  const [editedRecipient, setEditedRecipient] = useState<Recipient>(() => recipients[0] ?? {});
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const objectUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +73,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       setIsGenerating(true);
       setBatchError(null);
       setCertificates(recipients.map((recipient) => ({
-        recipient, docx: null, pdf: null, status: "generating" as const, reviewed: false, approved: false,
+        recipient, docx: null, pdf: null, pdfUrl: null, status: "generating" as const, reviewed: false, approved: false,
       })));
       setProcessed(0);
       try {
@@ -97,8 +98,10 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
             const name = safeFileName(recipientName(recipient, mapping, index), `certificate_${index + 1}`);
             const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
             if (cancelled) return;
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            objectUrlsRef.current.add(pdfUrl);
             setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
-              ? { ...item, docx: docxBlob, pdf: pdfBlob, status: "ready" as const }
+              ? { ...item, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const }
               : item));
           } catch (error) {
             if (cancelled) return;
@@ -133,18 +136,17 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const canDownload = allGenerated && approvedCount === certificates.length;
   const progress = recipients.length ? Math.round((processed / recipients.length) * 100) : 0;
 
-  useEffect(() => {
-    if (selected) setEditedRecipient(selected.recipient);
-  }, [selectedIndex, certificates.length, selected?.recipient]);
+  const editableFields = Object.entries(mapping);
 
-  const editableFields = useMemo(() => Object.entries(mapping), [mapping]);
+  useEffect(() => () => {
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    objectUrlsRef.current.clear();
+  }, []);
 
-  useEffect(() => {
-    if (!selected?.pdf) { setPdfUrl(null); return; }
-    const url = URL.createObjectURL(selected.pdf);
-    setPdfUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [selected?.pdf]);
+  function selectRecipient(index: number) {
+    setSelectedIndex(index);
+    setEditedRecipient(certificates[index]?.recipient ?? {});
+  }
 
   async function regenerateSelected() {
     if (!selected) return;
@@ -159,8 +161,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
       const name = safeFileName(recipientName(editedRecipient, mapping, selectedIndex), `certificate_${selectedIndex + 1}`);
       const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      objectUrlsRef.current.add(pdfUrl);
+      if (selected.pdfUrl) { URL.revokeObjectURL(selected.pdfUrl); objectUrlsRef.current.delete(selected.pdfUrl); }
       setCertificates((current) => current.map((item, index) => index === selectedIndex
-        ? { ...item, recipient: editedRecipient, docx: docxBlob, pdf: pdfBlob, status: "ready" as const, error: undefined, reviewed: false, approved: false }
+        ? { ...item, recipient: editedRecipient, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const, error: undefined, reviewed: false, approved: false }
         : item));
       toast.success("Certificate regenerated. Please review and approve it again.");
     } catch (error) {
@@ -246,11 +251,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
               <p className="text-xs text-muted-foreground">Recipient {selectedIndex + 1} of {certificates.length}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={selectedIndex === 0} onClick={() => setSelectedIndex((value) => value - 1)}>Previous</Button>
-              <select aria-label="Select recipient certificate" className="h-9 max-w-48 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => setSelectedIndex(Number(event.target.value))}>
+              <Button variant="outline" size="sm" disabled={selectedIndex === 0} onClick={() => selectRecipient(selectedIndex - 1)}>Previous</Button>
+              <select aria-label="Select recipient certificate" className="h-9 max-w-48 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => selectRecipient(Number(event.target.value))}>
                 {certificates.map((item, index) => <option key={index} value={index}>{index + 1}. {recipientName(item.recipient, mapping, index)}</option>)}
               </select>
-              <Button variant="outline" size="sm" disabled={selectedIndex >= certificates.length - 1} onClick={() => setSelectedIndex((value) => value + 1)}>Next</Button>
+              <Button variant="outline" size="sm" disabled={selectedIndex >= certificates.length - 1} onClick={() => selectRecipient(selectedIndex + 1)}>Next</Button>
             </div>
           </div>
 
@@ -264,7 +269,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           {selected.status === "ready" && selected.pdf && (
             <>
               <div className="bg-muted/50 p-2 sm:p-4">
-                <iframe title={`PDF certificate for ${recipientName(selected.recipient, mapping, selectedIndex)}`} src={pdfUrl ?? undefined} className="h-[65vh] min-h-[480px] w-full rounded-lg border bg-white" />
+                <iframe title={`PDF certificate for ${recipientName(selected.recipient, mapping, selectedIndex)}`} src={selected.pdfUrl ?? undefined} className="h-[65vh] min-h-[480px] w-full rounded-lg border bg-white" />
               </div>
               <div className="grid gap-4 border-t p-4 lg:grid-cols-[1fr_1.2fr]">
                 <div className="space-y-3">
