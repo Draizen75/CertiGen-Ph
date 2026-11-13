@@ -78,7 +78,7 @@ export function Review({ recipients, mapping, placeholders, outputMode, template
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div className="text-xs leading-5 text-muted-foreground">
           <p className="font-semibold text-foreground">What happens next</p>
-          <p>templateKind === "docx" ? "CertiGen generates each editable Word document in your browser. The browser preview may not reproduce every advanced Word layout feature. Downloads stay locked until every certificate is reviewed and approved." : "CertiGen renders each recipient directly onto your image/PDF artwork using the same browser Canvas renderer used for preview and PNG export. No external PDF conversion service is required. Downloads stay locked until every certificate is reviewed and approved.</p>
+          <p>{templateKind === "docx" ? "CertiGen generates each editable Word document in your browser. The browser preview may not reproduce every advanced Word layout feature. Downloads stay locked until every certificate is reviewed and approved." : "CertiGen renders each recipient directly onto your image/PDF artwork using the same browser Canvas renderer used for preview and PNG export. No external PDF conversion service is required. Downloads stay locked until every certificate is reviewed and approved."}</p>
         </div>
       </div>
 
