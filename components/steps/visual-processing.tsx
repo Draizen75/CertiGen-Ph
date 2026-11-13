@@ -55,8 +55,8 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
       }
       if (!cancelled) setGenerating(false);
     }
-    if (!recipients.length || !fields.length) { setBatchError("Add recipients and map at least one visual field."); setGenerating(false); return; }
-    void run().catch((error) => { if (!cancelled) { setBatchError(error instanceof Error ? error.message : "Batch generation failed."); setGenerating(false); } });
+    if (!recipients.length || !fields.length) { return; }
+    void Promise.resolve().then(() => { if (!cancelled) return run(); }).catch((error) => { if (!cancelled) { setBatchError(error instanceof Error ? error.message : "Batch generation failed."); setGenerating(false); } });
     return () => { cancelled = true; };
   }, [background, fields, recipients]);
 
@@ -72,10 +72,10 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
   const columns = useMemo(() => [...new Set(fields.map((field) => field.column))], [fields]);
 
   useEffect(() => {
-    if (!selected?.image) { setPreviewUrl(null); return; }
+    if (!selected?.image) return;
     const url = URL.createObjectURL(selected.image);
     setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
+    return () => { URL.revokeObjectURL(url); };
   }, [selected?.image]);
 
   const selectRecipient = (index: number) => { setSelectedIndex(index); setEdited(items[index]?.recipient ?? {}); };
