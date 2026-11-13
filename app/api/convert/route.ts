@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     if (!file.name.toLowerCase().endsWith(".docx")) {
       return NextResponse.json({ error: "Only DOCX files can be converted." }, { status: 400 });
     }
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "The generated DOCX exceeds the 10 MB conversion limit." }, { status: 413 });
+    if (file.size > 4 * 1024 * 1024) {
+      return NextResponse.json({ error: "The generated DOCX exceeds the 4 MB conversion limit for this deployment." }, { status: 413 });
     }
 
     const form = new FormData();
