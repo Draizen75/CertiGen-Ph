@@ -62,7 +62,7 @@ export function Review({ recipients, mapping, placeholders, outputMode, onBack, 
             <thead className="bg-muted/50 text-xs text-muted-foreground"><tr><th className="p-3">Recipient</th>{placeholders.slice(0, 3).map((field) => <th className="p-3" key={field}>{field}</th>)}</tr></thead>
             <tbody className="divide-y">
               {sampleRecipients.map((recipient, index) => (
-                <tr key={index}><td className="p-3 font-medium">{String(recipient[mapping.NAME || mapping.Name || Object.values(mapping)[0]] ?? `Recipient ${index + 1}`)}</td>
+                <tr key={index}><td className="p-3 font-medium">{String(recipient[mapping[placeholders.find((field) => field.toLowerCase() === "name") ?? ""] || Object.values(mapping)[0]] ?? `Recipient ${index + 1}`)}</td>
                   {placeholders.slice(0, 3).map((field) => <td className="max-w-48 truncate p-3 text-muted-foreground" key={field}>{String(recipient[mapping[field] ?? ""] ?? "—")}</td>)}
                 </tr>
               ))}
