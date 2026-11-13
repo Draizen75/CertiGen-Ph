@@ -115,7 +115,7 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
       items.forEach((item, index) => {
         if (item.image && item.approved) zip.file(`${String(index + 1).padStart(4, "0")}_${safeName(getName(item.recipient, fields, index), `recipient_${index + 1}`)}.png`, item.image);
       });
-      const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 5 } });
+      const blob = await zip.generateAsync({ type: "blob", compression: "STORE" });
       saveAs(blob, `certigen-certificates-${new Date().toISOString().slice(0, 10)}.zip`);
       toast.success(`Downloaded ${approvedCount} PNG certificates and a combined PDF.`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not create the ZIP download."); }
