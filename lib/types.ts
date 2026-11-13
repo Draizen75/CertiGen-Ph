@@ -11,7 +11,7 @@ export const TemplatePlaceholderSchema = z.object({
 
 export type TemplatePlaceholder = z.infer<typeof TemplatePlaceholderSchema>;
 
-export const OutputModeSchema = z.enum(["COMBINED_DOCX", "SEPARATE_DOCX"]);
+export const OutputModeSchema = z.enum(["COMBINED_DOCX", "SEPARATE_DOCX", "PNG_ZIP"]);
 export type OutputMode = z.infer<typeof OutputModeSchema>;
 
 export const CertConfigSchema = z.object({
