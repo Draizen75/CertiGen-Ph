@@ -1,6 +1,6 @@
 # CertiGen PH
 
-CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, preview the generated Word documents, and download approved DOCX output.
+CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, convert the generated Word documents to PDF for faithful preview, and download approved DOCX/PDF output.
 
 ## Features
 
@@ -9,10 +9,10 @@ CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX te
 - Recipient-row review and inline editing before field mapping.
 - Conservative exact-name field auto-mapping with manual overrides.
 - Pre-generation recipient/value review and blank-value warnings.
-- Post-generation browser preview of each personalized DOCX file.
+- Post-generation PDF preview converted directly from each personalized DOCX using LibreOffice through Gotenberg.
 - Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated DOCX downloads.
 - Combined DOCX output or one DOCX per recipient in a ZIP archive.
-- DOCX generation and preview run in the browser; no external document-conversion service or account is required.
+- DOCX generation runs in the browser. PDF preview requires a trusted Gotenberg conversion service configured with `GOTENBERG_URL`; generated recipient data is sent to that service.
 - Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
 
 ## Requirements
@@ -36,6 +36,8 @@ npm run lint
 npm run build
 ```
 
+Set `GOTENBERG_URL` in `.env.local` to a private or trusted Gotenberg instance. In production, configure the same variable in the hosting environment. Do not expose an unauthenticated converter publicly; it receives documents containing recipient information. The conversion endpoint accepts DOCX files up to 4 MB per recipient.
+
 Before releasing a change, manually test:
 - A DOCX template with multiple placeholders and formatting.
 - XLSX and CSV imports, empty files, duplicate/missing headers, and malformed files.
@@ -51,4 +53,4 @@ Users can navigate between generated certificates, edit mapped recipient values,
 
 ## Product direction
 
-The current release intentionally keeps the workflow account-free. DOCX generation, merging, and preview run in the browser. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
+The current release intentionally keeps the workflow account-free. DOCX generation and merging run in the browser; PDF preview uses the configured Gotenberg conversion service. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
