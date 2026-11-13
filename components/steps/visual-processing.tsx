@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, AlertCircle, CheckCircle2, CheckCheck, Download, Image as ImageIcon, Loader2, RefreshCw, ShieldCheck, SkipForward } from "lucide-react";
 import { Recipient } from "@/lib/types";
-import { VisualBackground, VisualField, renderVisualCertificate } from "@/lib/visual-certificate";
+import { VisualBackground, VisualField, createPdfFromPngs, renderVisualCertificate } from "@/lib/visual-certificate";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -91,7 +91,7 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not regenerate this certificate."); }
     finally { setRegenerating(false); }
   };
-  const markAllReviewed = () => {
+  const retrySelected = async () => {\n    if (!selected) return;\n    setRegenerating(true);\n    try {\n      const image = await renderVisualCertificate(background, fields, edited);\n      setItems((current) => current.map((item, index) => index === selectedIndex ? { ...item, recipient: edited, image, status: "ready", error: undefined, reviewed: false, approved: false } : item));\n      toast.success("Certificate generated. Review and approve it before download.");\n    } catch (error) { toast.error(error instanceof Error ? error.message : "Retry failed."); }\n    finally { setRegenerating(false); }\n  };\n  const markAllReviewed = () => {
     if (!allReady) return;
     setItems((current) => current.map((item) => item.status === "ready" ? { ...item, reviewed: true } : item));
     toast.success("All certificates marked as reviewed.");
@@ -117,14 +117,14 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
       });
       const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 5 } });
       saveAs(blob, `certigen-certificates-${new Date().toISOString().slice(0, 10)}.zip`);
-      toast.success(`Downloaded ${approvedCount} PNG certificates.`);
+      toast.success(`Downloaded ${approvedCount} PNG certificates and a combined PDF.`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not create the ZIP download."); }
     finally { setDownloading(false); }
   };
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="text-center"><p className="text-sm font-semibold text-primary">STEP 6 OF 6</p><h2 className="mt-2 text-2xl font-bold">Review generated certificates</h2><p className="mt-2 text-sm text-muted-foreground">Each certificate is rendered directly from the uploaded artwork and mapped fields. No document conversion service is used.</p></div>
+      <div className="text-center"><p className="text-sm font-semibold text-primary">STEP 6 OF 6</p><h2 className="mt-2 text-2xl font-bold">Review generated certificates</h2><p className="mt-2 text-sm text-muted-foreground">Each certificate is rendered directly from your artwork. PNG files and a combined multi-page PDF are created locally in your browser.</p></div>
       <div className="grid gap-3 sm:grid-cols-4">
         {[[ "Generated", readyCount ],[ "Reviewed", reviewedCount ],[ "Approved", approvedCount ],[ "Needs attention", failedCount ]].map(([label, value]) => <div key={String(label)} className="rounded-xl border p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{Number(value).toLocaleString()} <span className="text-sm font-normal text-muted-foreground">/ {items.length}</span></p></div>)}
       </div>
@@ -135,10 +135,10 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
       {selected && <section className="overflow-hidden rounded-2xl border">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4"><div><h3 className="font-semibold">Certificate review</h3><p className="text-xs text-muted-foreground">Recipient {selectedIndex + 1} of {items.length}</p></div><div className="flex items-center gap-2"><Button size="sm" variant="outline" disabled={!selectedIndex} onClick={() => selectRecipient(selectedIndex - 1)}>Previous</Button><select aria-label="Select recipient" className="h-9 max-w-56 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => selectRecipient(Number(event.target.value))}>{items.map((item, index) => <option key={index} value={index}>{index + 1}. {getName(item.recipient, fields, index)} · {item.status}</option>)}</select><Button size="sm" variant="outline" disabled={selectedIndex >= items.length - 1} onClick={() => selectRecipient(selectedIndex + 1)}>Next</Button></div></div>
         {selected.status === "generating" && <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Rendering certificate…</div>}
-        {selected.status === "error" && <div className="space-y-4 p-5"><Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Certificate rendering failed</AlertTitle><AlertDescription>{selected.error}</AlertDescription></Alert></div>}
+        {selected.status === "error" && <div className="space-y-4 p-5"><Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Certificate rendering failed</AlertTitle><AlertDescription>{selected.error}</AlertDescription></Alert><div className="grid gap-3 sm:grid-cols-2">{columns.map((column) => <div key={column} className="space-y-1"><Label className="text-xs">{column}</Label><Input value={String(edited[column] ?? "")} onChange={(event) => setEdited((current) => ({ ...current, [column]: event.target.value }))} /></div>)}</div><Button onClick={retrySelected} disabled={regenerating}><RefreshCw className="mr-2 size-4" />Retry this certificate</Button></div>}
         {selected.status === "ready" && previewUrl && <><div className="bg-muted/40 p-4"><img src={previewUrl} alt={`Certificate for ${getName(selected.recipient, fields, selectedIndex)}`} className="mx-auto max-h-[70vh] w-full rounded-lg border bg-white object-contain shadow-sm" /></div><div className="grid gap-4 border-t p-4 lg:grid-cols-[1fr_1fr]"><div className="space-y-3"><div className="flex items-center gap-2 text-sm font-semibold"><ImageIcon className="size-4" />Correct recipient data</div><div className="grid gap-3 sm:grid-cols-2">{columns.map((column) => <div key={column} className="space-y-1"><Label className="text-xs">{column}</Label><Input value={String(edited[column] ?? "")} onChange={(event) => setEdited((current) => ({ ...current, [column]: event.target.value }))} /></div>)}</div><Button variant="outline" onClick={regenerate} disabled={regenerating || JSON.stringify(edited) === JSON.stringify(selected.recipient)}>{regenerating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}Save changes & regenerate</Button></div><div className="space-y-3 rounded-xl bg-muted/40 p-4"><div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div><p className="text-xs text-muted-foreground">Inspect the rendered certificate, then mark it reviewed and approve it.</p><div className="flex flex-wrap gap-2"><Button variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setItems((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}><CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark reviewed"}</Button><Button disabled={!selected.reviewed || selected.approved} onClick={() => setItems((current) => current.map((item, index) => index === selectedIndex ? { ...item, approved: true } : item))}><ShieldCheck className="mr-2 size-4" />{selected.approved ? "Approved" : "Approve"}</Button></div></div></div></>}
       </section>}
-      <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row"><Button variant="outline" onClick={onBack} disabled={generating}><ArrowLeft className="mr-2 size-4" />Back to options</Button><Button size="lg" onClick={download} disabled={!canDownload}><Download className="mr-2 size-4" />Download approved PNGs ({approvedCount}/{items.length})</Button></div>
+      <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row"><Button variant="outline" onClick={onBack} disabled={generating}><ArrowLeft className="mr-2 size-4" />Back to options</Button><Button size="lg" onClick={download} disabled={!canDownload}><Download className="mr-2 size-4" />Download PNGs + PDF ({approvedCount}/{items.length})</Button></div>
       {!canDownload && <p className="text-center text-xs text-muted-foreground">Download unlocks after every PNG is generated, reviewed, and approved.</p>}
       {canDownload && <p className="flex items-center justify-center gap-2 text-xs text-emerald-700"><CheckCircle2 className="size-4" />All certificates are ready for download.</p>}
     </div>
