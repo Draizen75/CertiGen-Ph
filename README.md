@@ -1,19 +1,41 @@
 # CertiGen PH
 
-CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, convert the generated Word documents to PDF for faithful preview, and download approved DOCX/PDF output.
+CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template or image/PDF certificate artwork, import recipients from XLSX/CSV or paste names, map fields, preview personalized certificates, review the batch, and download approved output.
 
-## Features
+## Template types
 
-- DOCX templates with supported merge-field delimiters: `{{FIELD}}`, `[FIELD]`, `<FIELD>`, and `«FIELD»`.
+### Visual templates (recommended)
+- PNG and JPG/JPEG image backgrounds.
+- PDF backgrounds rendered locally in the browser with Mozilla PDF.js. The first page is used; multi-page PDFs currently use page 1 only.
+- Add, move, resize, and style text fields directly over the certificate artwork.
+- Map each visual field to a recipient spreadsheet column.
+- Configure font family, size, weight, color, and alignment.
+- Preview sample recipient data before generation.
+- The same Canvas renderer is used for generated preview images and final PNG downloads.
+- PNG certificates are generated locally and packaged into a ZIP. No Gotenberg service or external conversion endpoint is used.
+
+### DOCX templates
+- Existing Word templates and supported merge-field delimiters: `{{FIELD}}`, `[FIELD]`, `<FIELD>`, and `«FIELD»`.
 - XLSX and CSV import, plus manual recipient entry.
-- Recipient-row review and inline editing before field mapping.
-- Conservative exact-name field auto-mapping with manual overrides.
-- Pre-generation recipient/value review and blank-value warnings.
-- Post-generation PDF preview converted directly from each personalized DOCX using LibreOffice through Gotenberg.
-- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated DOCX and matching PDF downloads.
-- Combined DOCX output or one DOCX per recipient in a ZIP archive; matching PDFs are included in either mode.
-- DOCX generation runs in the browser. PDF preview requires a trusted Gotenberg conversion service configured with `GOTENBERG_URL`; generated recipient data is sent to that service.
-- Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
+- Conservative exact-name placeholder mapping.
+- DOCX generation and download remain supported.
+- Browser preview uses Mammoth HTML conversion. Floating Word text boxes and some advanced Word layout features may not be represented accurately; open the downloaded DOCX in Microsoft Word or LibreOffice for the authoritative layout.
+
+## Batch workflow
+
+- Recipient-row review and inline editing before mapping.
+- Pre-generation data review and blank-value warnings.
+- Per-recipient navigation, correction, and regeneration.
+- Review and approval counters, bulk review/approval, and next-unreviewed navigation.
+- Batch download stays locked until all generated certificates are reviewed and approved.
+- Image/PDF templates download as individual PNG files in a ZIP.
+- DOCX templates download as a combined DOCX or separate DOCX files in a ZIP.
+
+## Privacy and rendering
+
+All template parsing, PDF page rendering, Canvas rendering, DOCX generation, and ZIP creation happen in the browser. Recipient data and uploaded templates are not sent to a document-conversion service by this workflow. The PDF.js library is bundled with the application; it is not loaded from a third-party CDN.
+
+For PDF templates, CertiGen rasterizes the first page into an image background at upload time. Text fields are then drawn on top of that background. This means the generated output is a raster PNG, not an editable PDF. Use a high-resolution source PDF or image for print-quality results.
 
 ## Requirements
 
@@ -36,21 +58,15 @@ npm run lint
 npm run build
 ```
 
-Set `GOTENBERG_URL` in `.env.local` to a private or trusted Gotenberg 9 instance. In production, configure it in the hosting environment. If the service uses HTTP Basic Auth, also set `GOTENBERG_USERNAME` and `GOTENBERG_PASSWORD`; both must be set together. Never expose these as `NEXT_PUBLIC_` variables. Enable Gotenberg Basic Auth with `API_ENABLE_BASIC_AUTH=true`, `GOTENBERG_API_BASIC_AUTH_USERNAME`, and `GOTENBERG_API_BASIC_AUTH_PASSWORD` on the converter service. Do not expose an unauthenticated converter publicly; it receives documents containing recipient information. The conversion endpoint accepts DOCX files up to 4 MB per recipient.
-
-Before releasing a change, manually test:
-- A DOCX template with multiple placeholders and formatting.
-- XLSX and CSV imports, empty files, duplicate/missing headers, and malformed files.
-- Manual names, inline edits, duplicate recipient names, and blank mapped values.
-- Combined DOCX and separate ZIP generation.
+Before release, manually test:
+- PNG, JPG, and PDF template uploads, including large dimensions and multi-page PDFs.
+- Field placement, dragging, resizing, style changes, and spreadsheet-column mapping.
+- Short and very long names, non-Latin characters, empty values, and different browser zoom levels.
+- XLSX/CSV imports, manual recipients, and duplicate recipient names.
+- Per-recipient correction/regeneration, bulk review/approval, and ZIP downloads.
+- DOCX generation, Mammoth preview limitations, and both DOCX output modes.
 - Navigation away during generation, retry after an error, and a batch near the 1,000-recipient limit.
-
-## Certificate review
-
-CertiGen generates each personalized DOCX once in the browser, then converts that exact DOCX to PDF through LibreOffice on the configured Gotenberg service. The PDF preview preserves floating text boxes, paragraph alignment, page dimensions, images, and pagination much more faithfully than a browser DOCX-to-HTML renderer. The original DOCX remains the editable source and is not recreated for preview.
-
-Users can navigate between generated certificates, edit mapped recipient values, and regenerate only the affected certificate. Regeneration resets that certificate's review and approval state. Batch download remains disabled until every certificate has a successful DOCX and matching PDF, is marked reviewed, and is approved. Every ZIP includes the matching PDF previews; the selected output mode determines whether it also contains individual DOCX files or one combined DOCX.
 
 ## Product direction
 
-The current release intentionally keeps the workflow account-free. DOCX generation and merging run in the browser; PDF preview uses the configured Gotenberg conversion service. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
+Visual templates are the recommended workflow for accurate positioning because the editor defines exact field coordinates over the certificate artwork and uses the same renderer for preview and export. DOCX remains available for users who require editable Word output, with the documented preview limitations.
