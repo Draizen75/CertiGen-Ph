@@ -127,3 +127,71 @@ export async function renderVisualCertificate(
     canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not export the certificate image.")), "image/png");
   });
 }
+
+async function blobToJpeg(blob: Blob): Promise<{ bytes: Uint8Array; width: number; height: number }> {
+  const image = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Could not prepare certificate pages for PDF export.");
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0);
+  image.close();
+  const jpeg = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("Could not encode a certificate page.")), "image/jpeg", 0.94));
+  return { bytes: new Uint8Array(await jpeg.arrayBuffer()), width: canvas.width, height: canvas.height };
+}
+
+function joinBytes(parts: Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(parts.reduce((total, part) => total + part.byteLength, 0));
+  let offset = 0;
+  for (const part of parts) { result.set(part, offset); offset += part.byteLength; }
+  return result;
+}
+
+export async function createPdfFromPngs(images: Blob[]): Promise<Blob> {
+  if (!images.length) throw new Error("There are no generated certificates to export.");
+  const pages = await Promise.all(images.map(blobToJpeg));
+  const encoder = new TextEncoder();
+  const objects: Uint8Array[] = [];
+  const pageIds = pages.map((_, index) => 3 + index * 3);
+  const kids = pageIds.map((id) => `${id} 0 R`).join(" ");
+  objects.push(encoder.encode("<< /Type /Catalog /Pages 2 0 R >>"));
+  objects.push(encoder.encode(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`));
+
+  pages.forEach((page, index) => {
+    const pageId = pageIds[index];
+    const contentId = pageId + 1;
+    const imageId = pageId + 2;
+    const widthPt = (page.width * 72 / 96).toFixed(3);
+    const heightPt = (page.height * 72 / 96).toFixed(3);
+    objects.push(encoder.encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] /Resources << /XObject << /Im0 ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`));
+    const stream = encoder.encode(`q\n${widthPt} 0 0 ${heightPt} 0 0 cm\n/Im0 Do\nQ\n`);
+    objects.push(joinBytes([encoder.encode(`<< /Length ${stream.byteLength} >>\nstream\n`), stream, encoder.encode("endstream")]));
+    objects.push(joinBytes([
+      encoder.encode(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>\nstream\n`),
+      page.bytes,
+      encoder.encode("\nendstream"),
+    ]));
+  });
+
+  const parts: Uint8Array[] = [encoder.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")];
+  const offsets = [0];
+  let offset = parts[0].byteLength;
+  objects.forEach((object, index) => {
+    offsets.push(offset);
+    const wrapped = joinBytes([encoder.encode(`${index + 1} 0 obj\n`), object, encoder.encode("\nendobj\n")]);
+    parts.push(wrapped);
+    offset += wrapped.byteLength;
+  });
+  const xrefOffset = offset;
+  const xref = [
+    `xref\n0 ${objects.length + 1}\n`,
+    "0000000000 65535 f \n",
+    ...offsets.slice(1).map((value) => `${String(value).padStart(10, "0")} 00000 n \n`),
+    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`,
+  ].join("");
+  parts.push(encoder.encode(xref));
+  return new Blob([joinBytes(parts).buffer as ArrayBuffer], { type: "application/pdf" });
+}
