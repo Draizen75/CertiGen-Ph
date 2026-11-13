@@ -1,6 +1,6 @@
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import DocxMerger from "@valentiniljaz/docx-merger";
+import { mergeDocx } from "@jonathanhotono/browser-docx-merger";
 import { Recipient } from "./types";
 
 export async function getPlaceholdersFromDocx(file: File): Promise<{ placeholders: string[]; delimiters: { start: string; end: string } }> {
@@ -93,13 +93,13 @@ export async function mergeDocxBuffers(buffers: ArrayBuffer[]): Promise<Blob> {
   }
 
   try {
-    const merger = new DocxMerger();
-    const files = buffers.map((buffer) => new Uint8Array(buffer)) as unknown as Parameters<typeof merger.initialize>[1];
-    await merger.initialize({}, files);
-    const merged = await merger.save("blob");
-    return merged instanceof Blob
-      ? merged
-      : new Blob([merged], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    return await mergeDocx(buffers, {
+      insertEnd: true,
+      pageBreaks: true,
+      mergeStyles: true,
+      mergeNumbering: true,
+      mergeFootnotes: true,
+    });
   } catch (error) {
     console.error("Error combining DOCX files:", error);
     throw new Error("Failed to combine certificates into a single file.");
