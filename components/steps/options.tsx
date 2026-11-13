@@ -19,15 +19,15 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
   const options = [
     {
       value: "COMBINED_DOCX" as const,
-      title: "One combined Word file",
-      description: "All certificates in one DOCX, separated for convenient printing.",
+      title: "One combined Word document",
+      description: "All certificates in one editable DOCX. Individual reviewed PDFs are also included in the approved ZIP.",
       icon: FileText,
       note: "Best for printing",
     },
     {
       value: "SEPARATE_DOCX" as const,
-      title: "Individual Word files",
-      description: "A ZIP archive with one editable DOCX per recipient.",
+      title: "Individual Word documents",
+      description: "A ZIP archive with one editable DOCX per recipient, alongside each reviewed PDF.",
       icon: FileArchive,
       note: "Best for sharing",
     },
@@ -37,7 +37,7 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
     <div className="mx-auto max-w-2xl space-y-7 py-2 sm:py-4">
       <div className="text-center">
         <p className="text-sm font-semibold text-primary">STEP 4 OF 6</p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your download format</h2>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your Word output</h2>
         <p className="mt-2 text-sm text-muted-foreground">Your batch contains {recipientsCount.toLocaleString()} recipients.</p>
       </div>
 
