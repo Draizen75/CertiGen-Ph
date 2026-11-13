@@ -20,14 +20,14 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
     {
       value: "COMBINED_DOCX" as const,
       title: "One combined Word document",
-      description: "All personalized certificates in one editable Word document.",
+      description: "All personalized certificates in one editable Word document. The approved PDF previews are also included in the download ZIP.",
       icon: FileText,
       note: "Best for printing",
     },
     {
       value: "SEPARATE_DOCX" as const,
       title: "Individual Word documents",
-      description: "A ZIP archive containing one editable Word document per recipient.",
+      description: "A ZIP archive containing one editable Word document and one matching PDF per recipient.",
       icon: FileArchive,
       note: "Best for sharing",
     },
@@ -37,8 +37,8 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
     <div className="mx-auto max-w-2xl space-y-7 py-2 sm:py-4">
       <div className="text-center">
         <p className="text-sm font-semibold text-primary">STEP 4 OF 6</p>
-        <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your Word output</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Your batch contains {recipientsCount.toLocaleString()} recipients.</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">Choose your certificate downloads</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Your batch contains {recipientsCount.toLocaleString()} recipients. Each DOCX is converted to PDF for accurate review.</p>
       </div>
 
       <RadioGroup value={outputMode} onValueChange={(value) => setOutputMode(value as OutputMode)} className="grid gap-3">
