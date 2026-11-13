@@ -21,7 +21,7 @@ export type VisualBackground = {
   pageCount: number;
 };
 
-const MAX_CANVAS_PIXELS = 40_000_000;
+const MAX_CANVAS_PIXELS = 20_000_000;
 
 export async function loadVisualBackground(file: File): Promise<VisualBackground> {
   if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
@@ -103,7 +103,7 @@ export async function renderVisualCertificate(
     const boxHeight = field.height * canvas.height;
     const horizontalPadding = Math.max(4, boxWidth * 0.015);
     const maxWidth = Math.max(1, boxWidth - horizontalPadding * 2);
-    let fontSize = Math.max(8, field.fontSize);
+    let fontSize = Math.max(8, Math.min(field.fontSize, boxHeight * 0.8));
     const weight = field.bold ? "700" : "400";
     context.textAlign = field.align;
     context.textBaseline = "middle";
@@ -152,7 +152,7 @@ function joinBytes(parts: Uint8Array[]): Uint8Array {
 
 export async function createPdfFromPngs(images: Blob[]): Promise<Blob> {
   if (!images.length) throw new Error("There are no generated certificates to export.");
-  const pages = await Promise.all(images.map(blobToJpeg));
+  const pages: Awaited<ReturnType<typeof blobToJpeg>>[] = [];\n  for (const image of images) pages.push(await blobToJpeg(image));
   const encoder = new TextEncoder();
   const objects: Uint8Array[] = [];
   const pageIds = pages.map((_, index) => 3 + index * 3);
