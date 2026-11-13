@@ -11,11 +11,12 @@ interface Props {
   mapping: Record<string, string>;
   placeholders: string[];
   outputMode: OutputMode;
+  templateKind: "docx" | "image" | "pdf";
   onBack: () => void;
   onGenerate: () => void;
 }
 
-export function Review({ recipients, mapping, placeholders, outputMode, onBack, onGenerate }: Props) {
+export function Review({ recipients, mapping, placeholders, outputMode, templateKind, onBack, onGenerate }: Props) {
   const missingCount = useMemo(() => recipients.reduce((count, recipient) => (
     count + placeholders.filter((placeholder) => !String(recipient[mapping[placeholder] ?? ""] ?? "").trim()).length
   ), 0), [recipients, placeholders, mapping]);
@@ -30,7 +31,7 @@ export function Review({ recipients, mapping, placeholders, outputMode, onBack, 
         <p className="text-sm font-semibold text-primary">STEP 5 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight">Confirm your batch</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Check recipient data and field mappings before generating the actual certificates. You’ll review the generated PDF files in the next step.
+          Check recipient data and field mappings before generating the actual certificates. You’ll review the rendered certificate files in the next step.
         </p>
       </div>
 
@@ -77,13 +78,13 @@ export function Review({ recipients, mapping, placeholders, outputMode, onBack, 
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <div className="text-xs leading-5 text-muted-foreground">
           <p className="font-semibold text-foreground">What happens next</p>
-          <p>CertiGen generates each DOCX once, converts that exact file to PDF, and opens the generated PDF for review. Downloads stay locked until every certificate is reviewed and approved.</p>
+          <p>templateKind === "docx" ? "CertiGen generates each editable Word document in your browser. The browser preview may not reproduce every advanced Word layout feature. Downloads stay locked until every certificate is reviewed and approved." : "CertiGen renders each recipient directly onto your image/PDF artwork using the same browser Canvas renderer used for preview and PNG export. No external PDF conversion service is required. Downloads stay locked until every certificate is reviewed and approved.</p>
         </div>
       </div>
 
       <section className="flex items-center gap-3 rounded-xl border p-4">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">{isCombined ? <FileText className="size-5" /> : <FileArchive className="size-5" />}</span>
-        <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{isCombined ? "Combined DOCX + individual PDFs" : "Individual DOCX + PDF files"}</p><p className="text-xs text-muted-foreground">{recipients.length.toLocaleString()} certificate(s) · PDFs are included in the approved ZIP download.</p></div>
+        <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{templateKind !== "docx" ? "Individual PNG certificates" : isCombined ? "Combined DOCX files" : "Individual DOCX files"}</p><p className="text-xs text-muted-foreground">{recipients.length.toLocaleString()} certificate(s) · {templateKind !== "docx" ? "PNG files are included in the approved ZIP download." : "Editable Word files are included in the approved ZIP download."}</p></div>
       </section>
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
