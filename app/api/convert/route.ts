@@ -5,6 +5,16 @@ export const maxDuration = 60;
 
 const MAX_DOCX_BYTES = 4 * 1024 * 1024;
 
+function getGotenbergAuthHeader() {
+  const username = process.env.GOTENBERG_USERNAME?.trim();
+  const password = process.env.GOTENBERG_PASSWORD;
+  if (!username && !password) return undefined;
+  if (!username || !password) {
+    throw new Error("Set both GOTENBERG_USERNAME and GOTENBERG_PASSWORD, or leave both empty when using a private network.");
+  }
+  return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+}
+
 function getGotenbergUrl() {
   const configured = process.env.GOTENBERG_URL?.trim();
   if (!configured) return null;
@@ -60,7 +70,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Only DOCX files can be converted." }, { status: 415 });
     }
 
-    const converterForm = new FormData();
+    const authHeader = getGotenbergAuthHeader();\n    const converterForm = new FormData();
     converterForm.append("files", file, "certificate.docx");
     const conversion = await fetch(`${baseUrl}/forms/libreoffice/convert`, {
       method: "POST",
