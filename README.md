@@ -47,7 +47,7 @@ Before releasing a change, manually test:
 
 The review workflow converts each generated DOCX to PDF using a Gotenberg-compatible service backed by LibreOffice. Configure `GOTENBERG_URL` in the deployment environment to the base URL of a trusted Gotenberg instance, for example `https://gotenberg.example.com`. The app checks the service health before starting a batch and posts each generated DOCX to Gotenberg's `/forms/libreoffice/convert` endpoint through the server-side `/api/convert` route.
 
-Do not expose an unauthenticated converter publicly; protect it with network access controls or an authenticated reverse proxy. Generated DOCX files contain recipient data and are sent to the configured conversion service, so deployments must disclose this processing and use a service appropriate for the sensitivity of the data. Vercel deployments must account for function request-size and duration limits. If the converter is unavailable or not configured, generation stops before creating the batch.
+Do not expose an unauthenticated converter publicly; protect it with network access controls or an authenticated reverse proxy. Generated DOCX files contain recipient data and are sent to the configured conversion service, so deployments must disclose this processing and use a service appropriate for the sensitivity of the data. The conversion route enforces a 4 MB per-DOCX limit to stay within typical Vercel request payload constraints; deployments must also account for function duration limits. If the converter is unavailable or not configured, generation stops before creating the batch.
 
 ## Certificate review
 
