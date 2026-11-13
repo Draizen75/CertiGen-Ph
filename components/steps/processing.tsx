@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Recipient, OutputMode } from "@/lib/types";
 import { generateDocx, mergeDocxBuffers } from "@/lib/docx-engine";
-import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileArchive, FileText, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileText, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -72,7 +72,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       setIsGenerating(true);
       setBatchError(null);
       setCertificates(recipients.map((recipient) => ({
-        recipient, docx: null, pdf: null, status: "generating", reviewed: false, approved: false,
+        recipient, docx: null, pdf: null, status: "generating" as const, reviewed: false, approved: false,
       })));
       setProcessed(0);
       try {
@@ -84,7 +84,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           throw new Error(readinessResult?.error || "The PDF conversion service is unavailable. Check the deployment configuration.");
         }
         const templateBuffer = await templateFile.arrayBuffer();
-
 
         for (let index = 0; index < recipients.length; index++) {
           if (cancelled) return;
