@@ -91,7 +91,17 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not regenerate this certificate."); }
     finally { setRegenerating(false); }
   };
-  const retrySelected = async () => {\n    if (!selected) return;\n    setRegenerating(true);\n    try {\n      const image = await renderVisualCertificate(background, fields, edited);\n      setItems((current) => current.map((item, index) => index === selectedIndex ? { ...item, recipient: edited, image, status: "ready", error: undefined, reviewed: false, approved: false } : item));\n      toast.success("Certificate generated. Review and approve it before download.");\n    } catch (error) { toast.error(error instanceof Error ? error.message : "Retry failed."); }\n    finally { setRegenerating(false); }\n  };\n  const markAllReviewed = () => {
+  const retrySelected = async () => {
+    if (!selected) return;
+    setRegenerating(true);
+    try {
+      const image = await renderVisualCertificate(background, fields, edited);
+      setItems((current) => current.map((item, index) => index === selectedIndex ? { ...item, recipient: edited, image, status: "ready", error: undefined, reviewed: false, approved: false } : item));
+      toast.success("Certificate generated. Review and approve it before download.");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Retry failed."); }
+    finally { setRegenerating(false); }
+  };
+  const markAllReviewed = () => {
     if (!allReady) return;
     setItems((current) => current.map((item) => item.status === "ready" ? { ...item, reviewed: true } : item));
     toast.success("All certificates marked as reviewed.");
