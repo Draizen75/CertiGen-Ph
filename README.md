@@ -1,6 +1,6 @@
 # CertiGen PH
 
-CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, review the personalized values, and download editable DOCX output.
+CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, review the resulting PDFs, and download approved PDF/DOCX output.
 
 ## Features
 
@@ -47,4 +47,4 @@ The review step previews the actual recipient values that will be merged into ea
 
 ## Product direction
 
-The current release intentionally keeps the core workflow account-free and browser-based. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
+The current release intentionally keeps the workflow account-free. DOCX merge generation runs in the browser, while PDF conversion is handled by the deployment-configured service. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
