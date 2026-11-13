@@ -102,7 +102,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <p className="mt-2 text-center text-[11px] text-muted-foreground">Example layout only · Placeholders are replaced with each recipient's data</p>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">Example layout only · Placeholders are replaced with each recipient&apos;s data</p>
             </div>
             <div className="text-left">
               <p className="text-sm font-semibold text-primary">See the transformation</p>
@@ -156,7 +156,7 @@ export default function Home() {
                 </li>
               ))}
             </ol>
-            <p className="mt-4 text-xs text-muted-foreground">The final DOCX or ZIP is produced by CertiGen's real generation engine, not a static preview. All sample recipient details are fictional.</p>
+            <p className="mt-4 text-xs text-muted-foreground">The final DOCX or ZIP is produced by CertiGen&apos;s real generation engine, not a static preview. All sample recipient details are fictional.</p>
           </div>
           <div className="mt-9 grid gap-4 md:grid-cols-3">
             {steps.map(({ number, icon: Icon, title, detail }) => (

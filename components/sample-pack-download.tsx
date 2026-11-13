@@ -5,7 +5,7 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, PageO
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, FileArchive, CheckCircle2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const sampleRows = [

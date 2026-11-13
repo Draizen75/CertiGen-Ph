@@ -1,6 +1,6 @@
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
-import DocxMerger from "docx-merger";
+import { mergeDocx } from "@jonathanhotono/browser-docx-merger";
 import { Recipient } from "./types";
 
 export async function getPlaceholdersFromDocx(file: File): Promise<{ placeholders: string[]; delimiters: { start: string; end: string } }> {
@@ -81,27 +81,27 @@ export async function generateDocx(
   }
 }
 
-export function mergeDocxBuffers(buffers: ArrayBuffer[]): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    try {
-      if (buffers.length === 0) {
-        throw new Error("No certificates to combine.");
-      }
-      
-      if (buffers.length === 1) {
-        resolve(new Blob([buffers[0]], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }));
-        return;
-      }
+export async function mergeDocxBuffers(buffers: ArrayBuffer[]): Promise<Blob> {
+  if (buffers.length === 0) {
+    throw new Error("No certificates to combine.");
+  }
 
-      // DocxMerger expects JSZip instances or raw files. It works well with array buffers.
-      const docx = new DocxMerger({}, buffers);
-      
-      docx.save('blob', function (data: Blob | ArrayBuffer | Uint8Array) {
-          resolve(data as Blob);
-      });
-    } catch (err) {
-      console.error("Error combining DOCX files:", err);
-      reject(new Error("Failed to combine certificates into a single file."));
-    }
-  });
+  if (buffers.length === 1) {
+    return new Blob([buffers[0]], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+  }
+
+  try {
+    return await mergeDocx(buffers, {
+      insertEnd: true,
+      pageBreaks: true,
+      mergeStyles: true,
+      mergeNumbering: true,
+      mergeFootnotes: true,
+    });
+  } catch (error) {
+    console.error("Error combining DOCX files:", error);
+    throw new Error("Failed to combine certificates into a single file.");
+  }
 }

@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import * as mammoth from "mammoth";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, Loader2, FileText, FileArchive, ArrowLeft, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Recipient, OutputMode } from "@/lib/types";
 import { generateDocx, mergeDocxBuffers } from "@/lib/docx-engine";
+import { AlertCircle, ArrowLeft, CheckCircle2, CheckCheck, Download, FileText, Loader2, RefreshCw, ShieldCheck, SkipForward } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -20,208 +23,362 @@ interface Props {
   onBack: () => void;
 }
 
+type Certificate = {
+  recipient: Recipient;
+  docx: Blob | null;
+  status: "generating" | "ready" | "error";
+  error?: string;
+  reviewed: boolean;
+  approved: boolean;
+};
+
 function safeFileName(value: string, fallback: string) {
-  const cleaned = value
-    .normalize("NFKC")
-    .replace(/[<>:"\/\\|?*\u0000-\u001F]/g, " ")
-    .replace(/[. ]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/ /g, "_")
-    .slice(0, 80);
+  const cleaned = value.normalize("NFKC").replace(/[<>:"/\\|?*\u0000-\u001F]/g, " ")
+    .replace(/[. ]+$/g, "").replace(/\s+/g, " ").trim().replace(/ /g, "_").slice(0, 80);
   return cleaned || fallback;
 }
 
+function recipientName(recipient: Recipient, mapping: Record<string, string>, index: number) {
+  const nameColumn = Object.entries(mapping).find(([key]) => key.toLowerCase() === "name")?.[1];
+  return String((nameColumn && recipient[nameColumn]) || Object.values(recipient)[0] || `Recipient ${index + 1}`);
+}
+
+function DocxHtmlPreview({ file, title }: { file: Blob; title: string }) {
+  const [html, setHtml] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void file.arrayBuffer().then((arrayBuffer) => mammoth.convertToHtml({ arrayBuffer }))
+      .then((result) => { if (active) setHtml(result.value); })
+      .catch(() => { if (active) setHtml("<p>Browser preview is unavailable. Download and open this document in Word or LibreOffice.</p>"); });
+    return () => { active = false; };
+  }, [file]);
+  if (!html) return <div className="flex min-h-[420px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparing Word preview…</div>;
+  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;color:#111;margin:24px}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}td,th{padding:4px;border:1px solid #ddd}</style></head><body>${html}</body></html>`;
+  return <iframe title={title} srcDoc={srcDoc} sandbox="" className="h-[65vh] min-h-[480px] w-full bg-white" />;
+}
+
 export function Processing({ templateFile, recipients, mapping, delimiters, outputMode, onBack }: Props) {
-  const [progress, setProgress] = useState(0);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [processed, setProcessed] = useState(0);
-  const [status, setStatus] = useState<"processing" | "completed" | "error">("processing");
-  const [error, setError] = useState<string | null>(null);
-  const [finalBlob, setFinalBlob] = useState<Blob | null>(null);
-  const [generationAttempt, setGenerationAttempt] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(true);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [editedRecipient, setEditedRecipient] = useState<Recipient>(() => recipients[0] ?? {});
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function startGeneration() {
+    async function generateBatch() {
+      setIsGenerating(true);
+      setBatchError(null);
+      setCertificates(recipients.map((recipient) => ({
+        recipient, docx: null, status: "generating" as const, reviewed: false, approved: false,
+      })));
+      setProcessed(0);
       try {
-        setProgress(0);
-        setProcessed(0);
-        setStatus("processing");
-        setError(null);
-        setFinalBlob(null);
-
-        if (recipients.length === 0) throw new Error("There are no recipients to generate.");
-        if (Object.keys(mapping).length === 0) throw new Error("No template fields have been mapped.");
-
+        if (!recipients.length) throw new Error("There are no recipients to generate.");
+        if (!Object.keys(mapping).length) throw new Error("No template fields have been mapped.");
         const templateBuffer = await templateFile.arrayBuffer();
-        if (cancelled) return;
-
-        const docxBuffers: ArrayBuffer[] = [];
-        const zip = outputMode === "SEPARATE_DOCX" ? new JSZip() : null;
-        const usedNames = new Set<string>();
-        const nameColumn = Object.entries(mapping).find(([placeholder]) => placeholder.toLowerCase() === "name")?.[1];
 
         for (let index = 0; index < recipients.length; index++) {
           if (cancelled) return;
           const recipient = recipients[index];
-          const mappedData: Record<string, string> = {};
-
-          Object.entries(mapping).forEach(([placeholder, column]) => {
-            mappedData[placeholder] = String(recipient[column] ?? "");
-          });
-
-          const docxBuffer = await generateDocx(templateBuffer, mappedData, delimiters);
-          if (cancelled) return;
-
-          if (outputMode === "COMBINED_DOCX") {
-            docxBuffers.push(docxBuffer);
-          } else if (zip) {
-            const recipientName = nameColumn ? String(recipient[nameColumn] ?? "") : "";
-            const baseName = safeFileName(recipientName, `certificate_${index + 1}`);
-            let uniqueName = baseName;
-            let suffix = 2;
-            while (usedNames.has(uniqueName.toLocaleLowerCase())) {
-              uniqueName = baseName + "_" + suffix;
-              suffix += 1;
-            }
-            usedNames.add(uniqueName.toLocaleLowerCase());
-            zip.file(uniqueName + ".docx", docxBuffer);
-          }
-
-          setProcessed(index + 1);
-          setProgress(Math.round(((index + 1) / recipients.length) * 85));
-          if (index % 5 === 4) await new Promise((resolve) => setTimeout(resolve, 0));
-        }
-
-        if (cancelled) return;
-        let output: Blob;
-
-        if (outputMode === "COMBINED_DOCX") {
-          output = await mergeDocxBuffers(docxBuffers);
-        } else {
-          if (!zip) throw new Error("The ZIP archive could not be initialized.");
-          output = await zip.generateAsync(
-            { type: "blob", compression: "DEFLATE" },
-            (metadata) => {
-              if (!cancelled) setProgress(85 + Math.round(metadata.percent * 0.15));
-            }
+          const mergeData = Object.fromEntries(
+            Object.entries(mapping).map(([placeholder, column]) => [placeholder, String(recipient[column] ?? "")]),
           );
+          try {
+            const buffer = await generateDocx(templateBuffer, mergeData, delimiters);
+            const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+            if (cancelled) return;
+            setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
+              ? { ...item, docx: docxBlob, status: "ready" as const }
+              : item));
+          } catch (error) {
+            if (cancelled) return;
+            setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
+              ? { ...item, status: "error" as const, error: error instanceof Error ? error.message : "Certificate generation failed." }
+              : item));
+          }
+          setProcessed(index + 1);
         }
 
         if (cancelled) return;
-        if (output.size === 0) throw new Error("The generated file is empty. Please try again with a different template.");
-        setFinalBlob(output);
-        setProgress(100);
-        setStatus("completed");
-        toast.success(`Generated ${recipients.length.toLocaleString()} certificates successfully.`);
-      } catch (generationError) {
-        if (cancelled) return;
-        setStatus("error");
-        setError(generationError instanceof Error ? generationError.message : "Generation failed. Please review your template and data.");
-        console.error("Certificate generation failed:", generationError);
+      } catch (error) {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : "Batch generation failed.";
+          setBatchError(message);
+          setCertificates((current) => current.map((item) => ({ ...item, status: "error" as const, error: message })));
+        }
+      } finally {
+        if (!cancelled) setIsGenerating(false);
       }
     }
+    void generateBatch();
+    return () => { cancelled = true; };
+  }, [templateFile, recipients, mapping, delimiters]);
 
-    void startGeneration();
-    return () => {
-      cancelled = true;
-    };
-  }, [templateFile, recipients, mapping, delimiters, outputMode, generationAttempt]);
+  const selected = certificates[selectedIndex];
 
-  const isCombined = outputMode === "COMBINED_DOCX";
+  const generatedCount = certificates.filter((item) => item.status === "ready").length;
+  const reviewedCount = certificates.filter((item) => item.reviewed).length;
+  const approvedCount = certificates.filter((item) => item.approved).length;
+  const failedCount = certificates.filter((item) => item.status === "error").length;
+  const allGenerated = certificates.length > 0 && generatedCount === certificates.length && !isGenerating;
+  const canDownload = allGenerated && approvedCount === certificates.length;
+  const progress = recipients.length ? Math.round((processed / recipients.length) * 100) : 0;
+
+  const editableFields = Object.entries(mapping);
+  const allCertificatesReady = certificates.length > 0 && certificates.every((item) => item.status === "ready" && Boolean(item.docx));
+  const allReviewed = allCertificatesReady && certificates.every((item) => item.reviewed);
+  const allApproved = allReviewed && certificates.every((item) => item.approved);
+
+  function markAllReviewed() {
+    if (!allCertificatesReady) return;
+    setCertificates((current) => current.map((item) => item.status === "ready"
+      ? { ...item, reviewed: true }
+      : item));
+    toast.success("All generated certificates marked as reviewed.");
+  }
+
+  function approveAllReviewed() {
+    if (!allReviewed || isGenerating) return;
+    const confirmed = window.confirm(
+      `Approve all ${certificates.length} certificates? This confirms that you have checked the batch and want every generated certificate included in the download.`,
+    );
+    if (!confirmed) return;
+    setCertificates((current) => current.map((item) => item.status === "ready" && item.reviewed
+      ? { ...item, approved: true }
+      : item));
+    toast.success("All reviewed certificates approved.");
+  }
+
+  function goToNextUnreviewed() {
+    const nextIndex = certificates.findIndex((item, index) => index > selectedIndex && item.status === "ready" && !item.reviewed);
+    const wrappedIndex = nextIndex >= 0
+      ? nextIndex
+      : certificates.findIndex((item) => item.status === "ready" && !item.reviewed);
+    if (wrappedIndex >= 0) selectRecipient(wrappedIndex);
+  }
+
+  function selectRecipient(index: number) {
+    setSelectedIndex(index);
+    setEditedRecipient(certificates[index]?.recipient ?? {});
+  }
+
+  async function regenerateSelected() {
+    const targetIndex = selectedIndex;
+    const targetRecipient = { ...editedRecipient };
+    if (!certificates[targetIndex] || isRegenerating) return;
+    setIsRegenerating(true);
+    setBatchError(null);
+    try {
+      const templateBuffer = await templateFile.arrayBuffer();
+      const mergeData = Object.fromEntries(
+        Object.entries(mapping).map(([placeholder, column]) => [placeholder, String(targetRecipient[column] ?? "")]),
+      );
+      const buffer = await generateDocx(templateBuffer, mergeData, delimiters);
+      const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+      setCertificates((current) => current.map((item, index) => index === targetIndex
+        ? { ...item, recipient: targetRecipient, docx: docxBlob, status: "ready" as const, error: undefined, reviewed: false, approved: false }
+        : item));
+      setEditedRecipient(targetRecipient);
+      toast.success("Certificate regenerated. Please review and approve it again.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not regenerate this certificate.";
+      setCertificates((current) => current.map((item, index) => index === targetIndex
+        ? { ...item, status: "error" as const, error: message, reviewed: false, approved: false }
+        : item));
+      toast.error(message);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }
+
+  async function downloadBatch() {
+    if (!canDownload || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const zip = new JSZip();
+      const usedNames = new Set<string>();
+      for (let index = 0; index < certificates.length; index++) {
+        const item = certificates[index];
+        if (!item.docx || item.status !== "ready" || !item.reviewed || !item.approved) {
+          throw new Error(`Certificate ${index + 1} is not ready for download. Review and approve the complete batch again.`);
+        }
+        const base = safeFileName(recipientName(item.recipient, mapping, index), `certificate_${index + 1}`);
+        let name = base, suffix = 2;
+        while (usedNames.has(name.toLowerCase())) name = `${base}_${suffix++}`;
+        usedNames.add(name.toLowerCase());
+        if (outputMode === "SEPARATE_DOCX") zip.file(`${name}.docx`, item.docx);
+      }
+      if (outputMode === "COMBINED_DOCX") {
+        const buffers = await Promise.all(certificates.map((item) => item.docx!.arrayBuffer()));
+        const combined = await mergeDocxBuffers(buffers);
+        zip.file("certificates_combined.docx", combined);
+      }
+      const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+      saveAs(archive, "certigen-approved-certificates.zip");
+      toast.success("Approved certificate batch downloaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create the download archive.");
+    } finally {
+      setIsDownloading(false);
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-4 sm:py-8">
+    <div className="mx-auto max-w-5xl space-y-6 py-3 sm:py-6">
       <div className="text-center">
-        {status === "processing" && (
-          <>
-            <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Loader2 className="size-7 animate-spin" />
-            </div>
-            <p className="text-sm font-semibold text-primary">STEP 6 OF 6</p>
-            <h2 className="mt-2 text-2xl font-bold tracking-tight">Creating your certificates</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Keep this tab open while your files are being prepared.</p>
-          </>
-        )}
-        {status === "completed" && (
-          <>
-            <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
-              <CheckCircle2 className="size-7" />
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight">Your files are ready</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Your documents were generated in this browser and are ready to download.</p>
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-              <AlertCircle className="size-7" />
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight">We couldn’t finish generating</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Your original template and data have not been changed.</p>
-          </>
-        )}
-      </div>
-
-      <div className="space-y-3 rounded-2xl border bg-muted/30 p-5">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="font-medium">{status === "completed" ? "Completed" : "Generation progress"}</span>
-          <span className="tabular-nums text-muted-foreground">{progress}%</span>
-        </div>
-        <Progress value={progress} className="h-2.5" />
-        <p className="text-xs text-muted-foreground">
-          {status === "processing"
-            ? `Processed ${processed.toLocaleString()} of ${recipients.length.toLocaleString()} recipients`
-            : status === "completed"
-              ? `${recipients.length.toLocaleString()} certificates generated`
-              : "Generation stopped before a download was created."}
+        <p className="text-sm font-semibold text-primary">STEP 6 OF 6</p>
+        <h2 className="mt-2 text-2xl font-bold tracking-tight">{isGenerating ? "Generating your certificates" : "Review generated certificates"}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Each personalized DOCX is generated once and previewed in the browser. Floating Word text boxes and some advanced layout features may differ in this preview.
         </p>
       </div>
 
-      {status === "error" && (
-        <div className="space-y-3">
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>Generation error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button className="w-full sm:w-auto" onClick={() => setGenerationAttempt((attempt) => attempt + 1)}>
-          Try generating again
-        </Button>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ["Generated", generatedCount, certificates.length],
+          ["Reviewed", reviewedCount, certificates.length],
+          ["Approved", approvedCount, certificates.length],
+          ["Needs attention", failedCount, certificates.length],
+        ].map(([label, count, total]) => (
+          <div key={label} className="rounded-xl border bg-card p-3 sm:p-4">
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{count}<span className="text-sm font-normal text-muted-foreground"> / {total}</span></p>
+          </div>
+        ))}
+      </div>
+
+      {isGenerating && (
+        <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
+          <div className="flex justify-between text-sm"><span>Generating Word documents</span><span>{progress}%</span></div>
+          <Progress value={progress} />
+          <p className="text-xs text-muted-foreground">Processed {processed} of {recipients.length} recipients.</p>
         </div>
       )}
 
-      {status === "completed" && finalBlob && (
-        <div className="rounded-2xl border bg-card p-5 text-center sm:p-7">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            {isCombined ? <FileText className="size-6" /> : <FileArchive className="size-6" />}
+      {batchError && <Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Batch generation error</AlertTitle><AlertDescription>{batchError}</AlertDescription></Alert>}
+      {!isGenerating && allCertificatesReady && (
+        <section className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold">Batch review actions</h3>
+              <p className="text-xs text-muted-foreground">For large batches, use bulk actions after checking the certificates. Individual review remains available below.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={goToNextUnreviewed} disabled={reviewedCount === certificates.length}>
+                <SkipForward className="mr-2 size-4" />Next unreviewed
+              </Button>
+              <Button size="sm" variant="outline" onClick={markAllReviewed} disabled={allReviewed}>
+                <CheckCircle2 className="mr-2 size-4" />{allReviewed ? "All reviewed" : "Mark all reviewed"}
+              </Button>
+              <Button size="sm" onClick={approveAllReviewed} disabled={!allReviewed || allApproved}>
+                <CheckCheck className="mr-2 size-4" />{allApproved ? "All approved" : "Approve all"}
+              </Button>
+            </div>
           </div>
-          <p className="font-semibold">{isCombined ? "Combined Word document" : "Individual Word documents"}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isCombined ? "One DOCX file with all certificates." : `A ZIP archive containing ${recipients.length.toLocaleString()} DOCX files.`}
-          </p>
-          <Button
-            size="lg"
-            className="mt-6 w-full sm:w-auto"
-            onClick={() => saveAs(finalBlob, isCombined ? "certificates_combined.docx" : "certificates.zip")}
-          >
-            <Download className="mr-2 size-4" />
-            Download {isCombined ? "DOCX" : "ZIP"}
-          </Button>
-        </div>
+          <p className="text-xs text-muted-foreground">Bulk review and approval are explicit confirmations; they do not automatically inspect or validate certificate content. You can still open and approve individual recipients separately.</p>
+        </section>
+      )}
+
+      {failedCount > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>{failedCount} certificate(s) need attention</AlertTitle>
+          <AlertDescription>Select a failed recipient and retry. Downloads stay locked until every certificate is generated, reviewed, and approved.</AlertDescription>
+        </Alert>
+      )}
+
+      {selected && (
+        <section className="overflow-hidden rounded-2xl border">
+          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold">Certificate review</h3>
+              <p className="text-xs text-muted-foreground">Recipient {selectedIndex + 1} of {certificates.length}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={isRegenerating || selectedIndex === 0} onClick={() => selectRecipient(selectedIndex - 1)}>Previous</Button>
+              <select aria-label="Select recipient certificate" disabled={isRegenerating} className="h-9 max-w-48 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => selectRecipient(Number(event.target.value))}>
+                {certificates.map((item, index) => <option key={index} value={index}>{index + 1}. {recipientName(item.recipient, mapping, index)}</option>)}
+              </select>
+              <Button variant="outline" size="sm" disabled={isRegenerating || selectedIndex >= certificates.length - 1} onClick={() => selectRecipient(selectedIndex + 1)}>Next</Button>
+            </div>
+          </div>
+
+          {selected.status === "generating" && <div className="flex min-h-64 items-center justify-center gap-3 text-sm text-muted-foreground"><Loader2 className="size-5 animate-spin" />Generating this certificate…</div>}
+          {selected.status === "error" && (
+            <div className="space-y-4 p-6">
+              <Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Certificate generation failed</AlertTitle><AlertDescription>{selected.error}</AlertDescription></Alert>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Correct recipient data before retrying</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {editableFields.map(([placeholder, column]) => (
+                    <div key={placeholder} className="space-y-1">
+                      <Label htmlFor={`retry-edit-${selectedIndex}-${placeholder}`} className="text-xs">{placeholder}</Label>
+                      <Input disabled={isRegenerating} id={`retry-edit-${selectedIndex}-${placeholder}`} value={String(editedRecipient[column] ?? "")} onChange={(event) => setEditedRecipient((current) => ({ ...current, [column]: event.target.value }))} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Button onClick={regenerateSelected} disabled={isRegenerating}>
+                {isRegenerating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
+                Retry this certificate
+              </Button>
+            </div>
+          )}
+          {selected.status === "ready" && selected.docx && (
+            <>
+              <div className="bg-muted/50 p-2 sm:p-4">
+                <div className="mx-auto min-h-[480px] max-w-[850px] overflow-auto rounded-lg border bg-white p-6 shadow-sm sm:p-10">
+                  <DocxHtmlPreview key={selectedIndex} file={selected.docx} title={`Word preview for ${recipientName(selected.recipient, mapping, selectedIndex)}`} />
+                </div>
+                <p className="mx-auto mt-2 max-w-[850px] text-xs text-muted-foreground">Browser HTML preview of the generated DOCX. Floating text boxes and some advanced Word layout features may not be represented accurately.</p>
+              </div>
+              <div className="grid gap-4 border-t p-4 lg:grid-cols-[1fr_1.2fr]">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><FileText className="size-4" />Correct recipient data</div>
+                  <p className="text-xs text-muted-foreground">Change a mapped value and regenerate only this certificate. Its previous approval will be reset.</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {editableFields.map(([placeholder, column]) => (
+                      <div key={placeholder} className="space-y-1">
+                        <Label htmlFor={`edit-${selectedIndex}-${placeholder}`} className="text-xs">{placeholder}</Label>
+                        <Input disabled={isRegenerating} id={`edit-${selectedIndex}-${placeholder}`} value={String(editedRecipient[column] ?? "")} onChange={(event) => setEditedRecipient((current) => ({ ...current, [column]: event.target.value }))} />
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" onClick={regenerateSelected} disabled={isRegenerating || JSON.stringify(editedRecipient) === JSON.stringify(selected.recipient)}>
+                    {isRegenerating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}Save changes & regenerate
+                  </Button>
+                </div>
+                <div className="space-y-3 rounded-xl bg-muted/40 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div>
+                  <p className="text-xs text-muted-foreground">Inspect the Word preview above. Mark this recipient reviewed, then approve it for the batch download. You can also use the batch actions above.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button disabled={isRegenerating} variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
+                      <CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark as reviewed"}
+                    </Button>
+                    <Button disabled={isRegenerating || !selected.reviewed || selected.approved} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, approved: true } : item))}>
+                      <ShieldCheck className="mr-2 size-4" />{selected.approved ? "Approved" : "Approve certificate"}
+                    </Button>
+                  </div>
+                  {selected.approved && <p className="text-xs font-medium text-emerald-700">This certificate is approved for download.</p>}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
       )}
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
-        {status === "processing" ? (
-          <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />Cancel generation</Button>
-        ) : (
-          <Button className="w-full sm:w-auto" variant="outline" onClick={onBack}><ArrowLeft className="mr-2 size-4" />{status === "error" ? "Review settings" : "Change output"}</Button>
-        )}
-        {status === "completed" && (
-          <Button className="w-full sm:w-auto" variant="ghost" onClick={() => window.location.reload()}>Start a new batch</Button>
-        )}
+        <Button variant="outline" onClick={onBack} disabled={isGenerating}><ArrowLeft className="mr-2 size-4" />Back to output options</Button>
+        <Button size="lg" onClick={downloadBatch} disabled={!canDownload || isDownloading}>
+          {isDownloading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}Download approved batch ({approvedCount}/{certificates.length})
+        </Button>
       </div>
+      {!canDownload && !isGenerating && <p className="text-center text-xs text-muted-foreground">Download unlocks after every certificate has generated successfully, been reviewed, and approved. Use the batch review actions to avoid approving recipients one at a time.</p>}
+      {canDownload && <p className="flex items-center justify-center gap-2 text-xs text-emerald-700"><CheckCircle2 className="size-4" />All certificates are generated, reviewed, and approved.</p>}
     </div>
   );
 }
