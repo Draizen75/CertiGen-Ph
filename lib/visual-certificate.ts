@@ -152,7 +152,8 @@ function joinBytes(parts: Uint8Array[]): Uint8Array {
 
 export async function createPdfFromPngs(images: Blob[]): Promise<Blob> {
   if (!images.length) throw new Error("There are no generated certificates to export.");
-  const pages: Awaited<ReturnType<typeof blobToJpeg>>[] = [];\n  for (const image of images) pages.push(await blobToJpeg(image));
+  const pages: Awaited<ReturnType<typeof blobToJpeg>>[] = [];
+  for (const image of images) pages.push(await blobToJpeg(image));
   const encoder = new TextEncoder();
   const objects: Uint8Array[] = [];
   const pageIds = pages.map((_, index) => 3 + index * 3);
@@ -167,30 +168,52 @@ export async function createPdfFromPngs(images: Blob[]): Promise<Blob> {
     const widthPt = (page.width * 72 / 96).toFixed(3);
     const heightPt = (page.height * 72 / 96).toFixed(3);
     objects.push(encoder.encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${widthPt} ${heightPt}] /Resources << /XObject << /Im0 ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`));
-    const stream = encoder.encode(`q\n${widthPt} 0 0 ${heightPt} 0 0 cm\n/Im0 Do\nQ\n`);
-    objects.push(joinBytes([encoder.encode(`<< /Length ${stream.byteLength} >>\nstream\n`), stream, encoder.encode("endstream")]));
+    const stream = encoder.encode(`q
+${widthPt} 0 0 ${heightPt} 0 0 cm
+/Im0 Do
+Q
+`);
+    objects.push(joinBytes([encoder.encode(`<< /Length ${stream.byteLength} >>
+stream
+`), stream, encoder.encode("endstream")]));
     objects.push(joinBytes([
-      encoder.encode(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>\nstream\n`),
+      encoder.encode(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.byteLength} >>
+stream
+`),
       page.bytes,
-      encoder.encode("\nendstream"),
+      encoder.encode("
+endstream"),
     ]));
   });
 
-  const parts: Uint8Array[] = [encoder.encode("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n")];
+  const parts: Uint8Array[] = [encoder.encode("%PDF-1.4
+%\xE2\xE3\xCF\xD3
+")];
   const offsets = [0];
   let offset = parts[0].byteLength;
   objects.forEach((object, index) => {
     offsets.push(offset);
-    const wrapped = joinBytes([encoder.encode(`${index + 1} 0 obj\n`), object, encoder.encode("\nendobj\n")]);
+    const wrapped = joinBytes([encoder.encode(`${index + 1} 0 obj
+`), object, encoder.encode("
+endobj
+")]);
     parts.push(wrapped);
     offset += wrapped.byteLength;
   });
   const xrefOffset = offset;
   const xref = [
-    `xref\n0 ${objects.length + 1}\n`,
-    "0000000000 65535 f \n",
-    ...offsets.slice(1).map((value) => `${String(value).padStart(10, "0")} 00000 n \n`),
-    `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`,
+    `xref
+0 ${objects.length + 1}
+`,
+    "0000000000 65535 f 
+",
+    ...offsets.slice(1).map((value) => `${String(value).padStart(10, "0")} 00000 n 
+`),
+    `trailer
+<< /Size ${objects.length + 1} /Root 1 0 R >>
+startxref
+${xrefOffset}
+%%EOF`,
   ].join("");
   parts.push(encoder.encode(xref));
   return new Blob([joinBytes(parts).buffer as ArrayBuffer], { type: "application/pdf" });
