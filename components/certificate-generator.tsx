@@ -126,6 +126,7 @@ export function CertificateGenerator() {
 
           {currentStep === "review" && (
             <Review
+              templateFile={templateFile!}
               recipients={recipients}
               mapping={mapping}
               placeholders={placeholders}
