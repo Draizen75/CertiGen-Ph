@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileText, Loader2, Refr
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
+import * as mammoth from "mammoth";
 
 interface Props {
   templateFile: File;
@@ -25,8 +26,6 @@ interface Props {
 type Certificate = {
   recipient: Recipient;
   docx: Blob | null;
-  pdf: Blob | null;
-  pdfUrl: string | null;
   status: "generating" | "ready" | "error";
   error?: string;
   reviewed: boolean;
@@ -44,19 +43,6 @@ function recipientName(recipient: Recipient, mapping: Record<string, string>, in
   return String((nameColumn && recipient[nameColumn]) || Object.values(recipient)[0] || `Recipient ${index + 1}`);
 }
 
-async function convertDocxToPdf(docx: Blob, fileName: string): Promise<Blob> {
-  const form = new FormData();
-  form.append("file", docx, fileName);
-  const response = await fetch("/api/convert", { method: "POST", body: form });
-  if (!response.ok) {
-    const result = await response.json().catch(() => null);
-    throw new Error(result?.error || `PDF conversion failed (${response.status}).`);
-  }
-  const pdf = await response.blob();
-  if (pdf.type !== "application/pdf" || pdf.size === 0) throw new Error("The conversion service returned an invalid PDF.");
-  return pdf;
-}
-
 export function Processing({ templateFile, recipients, mapping, delimiters, outputMode, onBack }: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [processed, setProcessed] = useState(0);
@@ -66,7 +52,8 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [editedRecipient, setEditedRecipient] = useState<Recipient>(() => recipients[0] ?? {});
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const objectUrlsRef = useRef(new Set<string>());
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,17 +61,12 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       setIsGenerating(true);
       setBatchError(null);
       setCertificates(recipients.map((recipient) => ({
-        recipient, docx: null, pdf: null, pdfUrl: null, status: "generating" as const, reviewed: false, approved: false,
+        recipient, docx: null, status: "generating" as const, reviewed: false, approved: false,
       })));
       setProcessed(0);
       try {
         if (!recipients.length) throw new Error("There are no recipients to generate.");
         if (!Object.keys(mapping).length) throw new Error("No template fields have been mapped.");
-        const readiness = await fetch("/api/convert", { cache: "no-store" });
-        const readinessResult = await readiness.json().catch(() => null);
-        if (!readiness.ok || !readinessResult?.ready) {
-          throw new Error(readinessResult?.error || "The PDF conversion service is unavailable. Check the deployment configuration.");
-        }
         const templateBuffer = await templateFile.arrayBuffer();
 
         for (let index = 0; index < recipients.length; index++) {
@@ -96,13 +78,9 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           try {
             const buffer = await generateDocx(templateBuffer, mergeData, delimiters);
             const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-            const name = safeFileName(recipientName(recipient, mapping, index), `certificate_${index + 1}`);
-            const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
             if (cancelled) return;
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            objectUrlsRef.current.add(pdfUrl);
             setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
-              ? { ...item, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const }
+              ? { ...item, docx: docxBlob, status: "ready" as const }
               : item));
           } catch (error) {
             if (cancelled) return;
@@ -126,9 +104,24 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
     }
     void generateBatch();
     return () => { cancelled = true; };
-  }, [templateFile, recipients, mapping, delimiters, outputMode]);
+  }, [templateFile, recipients, mapping, delimiters]);
 
   const selected = certificates[selectedIndex];
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreviewHtml("");
+    setPreviewError(null);
+    if (!selected?.docx) return;
+    void selected.docx.arrayBuffer().then((arrayBuffer) => mammoth.convertToHtml({ arrayBuffer }))
+      .then((result) => {
+        if (!cancelled) setPreviewHtml(result.value);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setPreviewError(error instanceof Error ? error.message : "Could not preview this Word document.");
+      });
+    return () => { cancelled = true; };
+  }, [selected?.docx]);
   const generatedCount = certificates.filter((item) => item.status === "ready").length;
   const reviewedCount = certificates.filter((item) => item.reviewed).length;
   const approvedCount = certificates.filter((item) => item.approved).length;
@@ -139,11 +132,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
   const editableFields = Object.entries(mapping);
 
-  useEffect(() => () => {
-    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
-    objectUrlsRef.current.clear();
-  }, []);
-
   function selectRecipient(index: number) {
     setSelectedIndex(index);
     setEditedRecipient(certificates[index]?.recipient ?? {});
@@ -152,7 +140,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   async function regenerateSelected() {
     const targetIndex = selectedIndex;
     const targetRecipient = { ...editedRecipient };
-    const previousPdfUrl = certificates[targetIndex]?.pdfUrl;
     if (!certificates[targetIndex] || isRegenerating) return;
     setIsRegenerating(true);
     setBatchError(null);
@@ -163,13 +150,8 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       );
       const buffer = await generateDocx(templateBuffer, mergeData, delimiters);
       const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-      const name = safeFileName(recipientName(targetRecipient, mapping, targetIndex), `certificate_${targetIndex + 1}`);
-      const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      objectUrlsRef.current.add(pdfUrl);
-      if (previousPdfUrl) { URL.revokeObjectURL(previousPdfUrl); objectUrlsRef.current.delete(previousPdfUrl); }
       setCertificates((current) => current.map((item, index) => index === targetIndex
-        ? { ...item, recipient: targetRecipient, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const, error: undefined, reviewed: false, approved: false }
+        ? { ...item, recipient: targetRecipient, docx: docxBlob, status: "ready" as const, error: undefined, reviewed: false, approved: false }
         : item));
       setEditedRecipient(targetRecipient);
       toast.success("Certificate regenerated. Please review and approve it again.");
@@ -192,14 +174,13 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       const usedNames = new Set<string>();
       for (let index = 0; index < certificates.length; index++) {
         const item = certificates[index];
-        if (!item.pdf || !item.docx || item.status !== "ready" || !item.reviewed || !item.approved) {
+        if (!item.docx || item.status !== "ready" || !item.reviewed || !item.approved) {
           throw new Error(`Certificate ${index + 1} is not ready for download. Review and approve the complete batch again.`);
         }
         const base = safeFileName(recipientName(item.recipient, mapping, index), `certificate_${index + 1}`);
         let name = base, suffix = 2;
         while (usedNames.has(name.toLowerCase())) name = `${base}_${suffix++}`;
         usedNames.add(name.toLowerCase());
-        zip.file(`${name}.pdf`, item.pdf);
         if (outputMode === "SEPARATE_DOCX") zip.file(`${name}.docx`, item.docx);
       }
       if (outputMode === "COMBINED_DOCX") {
@@ -223,7 +204,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         <p className="text-sm font-semibold text-primary">STEP 6 OF 6</p>
         <h2 className="mt-2 text-2xl font-bold tracking-tight">{isGenerating ? "Generating your certificates" : "Review generated certificates"}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Each DOCX is generated once, converted to PDF, and reviewed from that exact PDF before download.
+          Each personalized DOCX is generated once and previewed before download. No external conversion service is required.
         </p>
       </div>
 
@@ -243,7 +224,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
       {isGenerating && (
         <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
-          <div className="flex justify-between text-sm"><span>Generating and converting files</span><span>{progress}%</span></div>
+          <div className="flex justify-between text-sm"><span>Generating Word documents</span><span>{progress}%</span></div>
           <Progress value={progress} />
           <p className="text-xs text-muted-foreground">Processed {processed} of {recipients.length} recipients.</p>
         </div>
@@ -255,7 +236,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertTitle>{failedCount} certificate(s) need attention</AlertTitle>
-          <AlertDescription>Select a failed recipient and retry. Downloads stay locked until every certificate has a valid PDF and approval.</AlertDescription>
+          <AlertDescription>Select a failed recipient and retry. Downloads stay locked until every certificate is generated, reviewed, and approved.</AlertDescription>
         </Alert>
       )}
 
@@ -296,10 +277,15 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
               </Button>
             </div>
           )}
-          {selected.status === "ready" && selected.pdf && (
+          {selected.status === "ready" && selected.docx && (
             <>
               <div className="bg-muted/50 p-2 sm:p-4">
-                <iframe title={`PDF certificate for ${recipientName(selected.recipient, mapping, selectedIndex)}`} src={selected.pdfUrl ?? undefined} className="h-[65vh] min-h-[480px] w-full rounded-lg border bg-white" />
+                <div className="mx-auto min-h-[480px] max-w-[850px] overflow-auto rounded-lg border bg-white p-6 shadow-sm sm:p-10">
+                  {previewError ? <p className="text-sm text-destructive">{previewError}</p> : previewHtml
+                    ? <iframe title={`DOCX preview for ${recipientName(selected.recipient, mapping, selectedIndex)}`} sandbox="" srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;margin:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}td,th{padding:4px;vertical-align:top}p{margin:0 0 10px}</style></head><body>${previewHtml}</body></html>`} className="h-[65vh] min-h-[480px] w-full bg-white" /> 
+                    : <div className="flex min-h-[420px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparing Word preview…</div>}
+                </div>
+                <p className="mx-auto mt-2 max-w-[850px] text-xs text-muted-foreground">Browser preview of the generated DOCX. Final spacing and pagination may differ slightly when opened in Microsoft Word or LibreOffice.</p>
               </div>
               <div className="grid gap-4 border-t p-4 lg:grid-cols-[1fr_1.2fr]">
                 <div className="space-y-3">
@@ -319,7 +305,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
                 </div>
                 <div className="space-y-3 rounded-xl bg-muted/40 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div>
-                  <p className="text-xs text-muted-foreground">Inspect the PDF above. Mark it reviewed, then approve it for the batch download.</p>
+                  <p className="text-xs text-muted-foreground">Inspect the Word preview above. Mark it reviewed, then approve it for the batch download.</p>
                   <div className="flex flex-wrap gap-2">
                     <Button disabled={isRegenerating} variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
                       <CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark as reviewed"}
