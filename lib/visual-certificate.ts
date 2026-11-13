@@ -21,13 +21,17 @@ export type VisualBackground = {
   pageCount: number;
 };
 
+const MAX_CANVAS_PIXELS = 40_000_000;
+
 export async function loadVisualBackground(file: File): Promise<VisualBackground> {
   if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
     const document = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const page = await document.getPage(1);
-    const viewport = page.getViewport({ scale: 2 });
+    const baseViewport = page.getViewport({ scale: 2 });
+    const scale = Math.min(1, Math.sqrt(MAX_CANVAS_PIXELS / (baseViewport.width * baseViewport.height)));
+    const viewport = page.getViewport({ scale: 2 * scale });
     const canvas = document.createElement("canvas");
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
@@ -46,8 +50,9 @@ export async function loadVisualBackground(file: File): Promise<VisualBackground
     image.src = objectUrl;
     await image.decode();
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
+    const scale = Math.min(1, Math.sqrt(MAX_CANVAS_PIXELS / (image.naturalWidth * image.naturalHeight)));
+    canvas.width = Math.max(1, Math.floor(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.floor(image.naturalHeight * scale));
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Your browser could not create an image preview canvas.");
     context.drawImage(image, 0, 0);
@@ -64,7 +69,7 @@ export function createDefaultVisualField(columns: string[], index: number): Visu
     label,
     column: columns[index] ?? columns[0] ?? "",
     x: 0.2,
-    y: 0.44 + (index * 0.1),
+    y: Math.min(0.82, 0.44 + (index * 0.1)),
     width: 0.6,
     height: 0.1,
     fontSize: 42,
