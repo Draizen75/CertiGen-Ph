@@ -65,6 +65,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [editedRecipient, setEditedRecipient] = useState<Recipient>(() => recipients[0] ?? {});
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const objectUrlsRef = useRef(new Set<string>());
 
   useEffect(() => {
@@ -149,28 +150,32 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   }
 
   async function regenerateSelected() {
-    if (!selected) return;
+    const targetIndex = selectedIndex;
+    const targetRecipient = { ...editedRecipient };
+    const previousPdfUrl = certificates[targetIndex]?.pdfUrl;
+    if (!certificates[targetIndex] || isRegenerating) return;
     setIsRegenerating(true);
     setBatchError(null);
     try {
       const templateBuffer = await templateFile.arrayBuffer();
       const mergeData = Object.fromEntries(
-        Object.entries(mapping).map(([placeholder, column]) => [placeholder, String(editedRecipient[column] ?? "")]),
+        Object.entries(mapping).map(([placeholder, column]) => [placeholder, String(targetRecipient[column] ?? "")]),
       );
       const buffer = await generateDocx(templateBuffer, mergeData, delimiters);
       const docxBlob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-      const name = safeFileName(recipientName(editedRecipient, mapping, selectedIndex), `certificate_${selectedIndex + 1}`);
+      const name = safeFileName(recipientName(targetRecipient, mapping, targetIndex), `certificate_${targetIndex + 1}`);
       const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
       const pdfUrl = URL.createObjectURL(pdfBlob);
       objectUrlsRef.current.add(pdfUrl);
-      if (selected.pdfUrl) { URL.revokeObjectURL(selected.pdfUrl); objectUrlsRef.current.delete(selected.pdfUrl); }
-      setCertificates((current) => current.map((item, index) => index === selectedIndex
-        ? { ...item, recipient: editedRecipient, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const, error: undefined, reviewed: false, approved: false }
+      if (previousPdfUrl) { URL.revokeObjectURL(previousPdfUrl); objectUrlsRef.current.delete(previousPdfUrl); }
+      setCertificates((current) => current.map((item, index) => index === targetIndex
+        ? { ...item, recipient: targetRecipient, docx: docxBlob, pdf: pdfBlob, pdfUrl, status: "ready" as const, error: undefined, reviewed: false, approved: false }
         : item));
+      setEditedRecipient(targetRecipient);
       toast.success("Certificate regenerated. Please review and approve it again.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not regenerate this certificate.";
-      setCertificates((current) => current.map((item, index) => index === selectedIndex
+      setCertificates((current) => current.map((item, index) => index === targetIndex
         ? { ...item, status: "error" as const, error: message, reviewed: false, approved: false }
         : item));
       toast.error(message);
@@ -180,25 +185,36 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   }
 
   async function downloadBatch() {
-    if (!canDownload) return;
-    const zip = new JSZip();
-    const usedNames = new Set<string>();
-    for (let index = 0; index < certificates.length; index++) {
-      const item = certificates[index];
-      const base = safeFileName(recipientName(item.recipient, mapping, index), `certificate_${index + 1}`);
-      let name = base, suffix = 2;
-      while (usedNames.has(name.toLowerCase())) name = `${base}_${suffix++}`;
-      usedNames.add(name.toLowerCase());
-      zip.file(`${name}.pdf`, item.pdf!);
-      if (outputMode === "SEPARATE_DOCX") zip.file(`${name}.docx`, item.docx!);
+    if (!canDownload || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const zip = new JSZip();
+      const usedNames = new Set<string>();
+      for (let index = 0; index < certificates.length; index++) {
+        const item = certificates[index];
+        if (!item.pdf || !item.docx || item.status !== "ready" || !item.reviewed || !item.approved) {
+          throw new Error(`Certificate ${index + 1} is not ready for download. Review and approve the complete batch again.`);
+        }
+        const base = safeFileName(recipientName(item.recipient, mapping, index), `certificate_${index + 1}`);
+        let name = base, suffix = 2;
+        while (usedNames.has(name.toLowerCase())) name = `${base}_${suffix++}`;
+        usedNames.add(name.toLowerCase());
+        zip.file(`${name}.pdf`, item.pdf);
+        if (outputMode === "SEPARATE_DOCX") zip.file(`${name}.docx`, item.docx);
+      }
+      if (outputMode === "COMBINED_DOCX") {
+        const buffers = await Promise.all(certificates.map((item) => item.docx!.arrayBuffer()));
+        const combined = await mergeDocxBuffers(buffers);
+        zip.file("certificates_combined.docx", combined);
+      }
+      const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+      saveAs(archive, "certigen-approved-certificates.zip");
+      toast.success("Approved certificate batch downloaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create the download archive.");
+    } finally {
+      setIsDownloading(false);
     }
-    if (outputMode === "COMBINED_DOCX") {
-      const buffers = await Promise.all(certificates.map((item) => item.docx!.arrayBuffer()));
-      const combined = await mergeDocxBuffers(buffers);
-      zip.file("certificates_combined.docx", combined);
-    }
-    const archive = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-    saveAs(archive, "certigen-approved-certificates.zip");
   }
 
   return (
@@ -251,11 +267,11 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
               <p className="text-xs text-muted-foreground">Recipient {selectedIndex + 1} of {certificates.length}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={selectedIndex === 0} onClick={() => selectRecipient(selectedIndex - 1)}>Previous</Button>
-              <select aria-label="Select recipient certificate" className="h-9 max-w-48 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => selectRecipient(Number(event.target.value))}>
+              <Button variant="outline" size="sm" disabled={isRegenerating || selectedIndex === 0} onClick={() => selectRecipient(selectedIndex - 1)}>Previous</Button>
+              <select aria-label="Select recipient certificate" disabled={isRegenerating} className="h-9 max-w-48 rounded-md border bg-background px-2 text-sm" value={selectedIndex} onChange={(event) => selectRecipient(Number(event.target.value))}>
                 {certificates.map((item, index) => <option key={index} value={index}>{index + 1}. {recipientName(item.recipient, mapping, index)}</option>)}
               </select>
-              <Button variant="outline" size="sm" disabled={selectedIndex >= certificates.length - 1} onClick={() => selectRecipient(selectedIndex + 1)}>Next</Button>
+              <Button variant="outline" size="sm" disabled={isRegenerating || selectedIndex >= certificates.length - 1} onClick={() => selectRecipient(selectedIndex + 1)}>Next</Button>
             </div>
           </div>
 
@@ -279,7 +295,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
                     {editableFields.map(([placeholder, column]) => (
                       <div key={placeholder} className="space-y-1">
                         <Label htmlFor={`edit-${selectedIndex}-${placeholder}`} className="text-xs">{placeholder}</Label>
-                        <Input id={`edit-${selectedIndex}-${placeholder}`} value={String(editedRecipient[column] ?? "")} onChange={(event) => setEditedRecipient((current) => ({ ...current, [column]: event.target.value }))} />
+                        <Input disabled={isRegenerating} id={`edit-${selectedIndex}-${placeholder}`} value={String(editedRecipient[column] ?? "")} onChange={(event) => setEditedRecipient((current) => ({ ...current, [column]: event.target.value }))} />
                       </div>
                     ))}
                   </div>
@@ -291,10 +307,10 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
                   <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div>
                   <p className="text-xs text-muted-foreground">Inspect the PDF above. Mark it reviewed, then approve it for the batch download.</p>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
+                    <Button disabled={isRegenerating} variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
                       <CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark as reviewed"}
                     </Button>
-                    <Button disabled={!selected.reviewed || selected.approved} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, approved: true } : item))}>
+                    <Button disabled={isRegenerating || !selected.reviewed || selected.approved} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, approved: true } : item))}>
                       <ShieldCheck className="mr-2 size-4" />{selected.approved ? "Approved" : "Approve certificate"}
                     </Button>
                   </div>
@@ -308,8 +324,8 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
         <Button variant="outline" onClick={onBack} disabled={isGenerating}><ArrowLeft className="mr-2 size-4" />Back to output options</Button>
-        <Button size="lg" onClick={downloadBatch} disabled={!canDownload}>
-          <Download className="mr-2 size-4" />Download approved batch ({approvedCount}/{certificates.length})
+        <Button size="lg" onClick={downloadBatch} disabled={!canDownload || isDownloading}>
+          {isDownloading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}Download approved batch ({approvedCount}/{certificates.length})
         </Button>
       </div>
       {!canDownload && !isGenerating && <p className="text-center text-xs text-muted-foreground">Download unlocks after every certificate has generated successfully, been reviewed, and approved.</p>}
