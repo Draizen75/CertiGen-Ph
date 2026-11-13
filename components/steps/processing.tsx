@@ -147,7 +147,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const progress = recipients.length ? Math.round((processed / recipients.length) * 100) : 0;
 
   const editableFields = Object.entries(mapping);
-  const allCertificatesReady = certificates.length > 0 && certificates.every((item) => item.status === "ready" && item.docx && item.pdf);
+  const allCertificatesReady = certificates.length > 0 && certificates.every((item) => item.status === "ready" && Boolean(item.docx && item.pdf));
   const allReviewed = allCertificatesReady && certificates.every((item) => item.reviewed);
   const allApproved = allReviewed && certificates.every((item) => item.approved);
 
