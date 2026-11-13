@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, ArrowRight, FileText, FileArchive, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, FileArchive, ShieldCheck } from "lucide-react";
 import { OutputMode } from "@/lib/types";
 
 interface Props {
@@ -65,9 +65,9 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
       </RadioGroup>
 
       <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-4">
-        <LockKeyhole className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <p className="text-xs leading-5 text-muted-foreground">
-          Generation runs in your browser. Your template and recipient data are not uploaded to a CertiGen server.
+          DOCX files are generated in your browser. To create accurate PDF previews, each generated DOCX is sent through the configured PDF conversion service. Do not continue with confidential recipient data unless you trust the service configured by this deployment.
         </p>
       </div>
 
