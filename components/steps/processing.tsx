@@ -43,6 +43,30 @@ function recipientName(recipient: Recipient, mapping: Record<string, string>, in
   return String((nameColumn && recipient[nameColumn]) || Object.values(recipient)[0] || `Recipient ${index + 1}`);
 }
 
+function DocxPreview({ file, title }: { file: Blob; title: string }) {
+  const [html, setHtml] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void file.arrayBuffer()
+      .then((arrayBuffer) => mammoth.convertToHtml({ arrayBuffer }))
+      .then((result) => {
+        if (!cancelled) setHtml(result.value);
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : "Could not preview this Word document.");
+      });
+    return () => { cancelled = true; };
+  }, [file]);
+
+  if (error) return <p className="text-sm text-destructive">{error}</p>;
+  if (!html) return <div className="flex min-h-[420px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparing Word preview…</div>;
+
+  const srcDoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;margin:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}td,th{padding:4px;vertical-align:top}p{margin:0 0 10px}</style></head><body>${html}</body></html>`;
+  return <iframe title={title} sandbox="" srcDoc={srcDoc} className="h-[65vh] min-h-[480px] w-full bg-white" />;
+}
+
 export function Processing({ templateFile, recipients, mapping, delimiters, outputMode, onBack }: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [processed, setProcessed] = useState(0);
@@ -52,8 +76,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const [editedRecipient, setEditedRecipient] = useState<Recipient>(() => recipients[0] ?? {});
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState("");
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,20 +130,6 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
   const selected = certificates[selectedIndex];
 
-  useEffect(() => {
-    let cancelled = false;
-    setPreviewHtml("");
-    setPreviewError(null);
-    if (!selected?.docx) return;
-    void selected.docx.arrayBuffer().then((arrayBuffer) => mammoth.convertToHtml({ arrayBuffer }))
-      .then((result) => {
-        if (!cancelled) setPreviewHtml(result.value);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setPreviewError(error instanceof Error ? error.message : "Could not preview this Word document.");
-      });
-    return () => { cancelled = true; };
-  }, [selected?.docx]);
   const generatedCount = certificates.filter((item) => item.status === "ready").length;
   const reviewedCount = certificates.filter((item) => item.reviewed).length;
   const approvedCount = certificates.filter((item) => item.approved).length;
@@ -281,9 +289,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
             <>
               <div className="bg-muted/50 p-2 sm:p-4">
                 <div className="mx-auto min-h-[480px] max-w-[850px] overflow-auto rounded-lg border bg-white p-6 shadow-sm sm:p-10">
-                  {previewError ? <p className="text-sm text-destructive">{previewError}</p> : previewHtml
-                    ? <iframe title={`DOCX preview for ${recipientName(selected.recipient, mapping, selectedIndex)}`} sandbox="" srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;color:#111;line-height:1.5;margin:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;max-width:100%}td,th{padding:4px;vertical-align:top}p{margin:0 0 10px}</style></head><body>${previewHtml}</body></html>`} className="h-[65vh] min-h-[480px] w-full bg-white" /> 
-                    : <div className="flex min-h-[420px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Preparing Word preview…</div>}
+                  <DocxPreview key={selectedIndex} file={selected.docx} title={`DOCX preview for ${recipientName(selected.recipient, mapping, selectedIndex)}`} />
                 </div>
                 <p className="mx-auto mt-2 max-w-[850px] text-xs text-muted-foreground">Browser preview of the generated DOCX. Final spacing and pagination may differ slightly when opened in Microsoft Word or LibreOffice.</p>
               </div>
