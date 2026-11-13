@@ -98,12 +98,12 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
             const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
             if (cancelled) return;
             setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
-              ? { ...item, docx: docxBlob, pdf: pdfBlob, status: "ready" }
+              ? { ...item, docx: docxBlob, pdf: pdfBlob, status: "ready" as const }
               : item));
           } catch (error) {
             if (cancelled) return;
             setCertificates((current) => current.map((item, itemIndex) => itemIndex === index
-              ? { ...item, status: "error", error: error instanceof Error ? error.message : "Certificate generation failed." }
+              ? { ...item, status: "error" as const, error: error instanceof Error ? error.message : "Certificate generation failed." }
               : item));
           }
           setProcessed(index + 1);
@@ -114,7 +114,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
         if (!cancelled) {
           const message = error instanceof Error ? error.message : "Batch generation failed.";
           setBatchError(message);
-          setCertificates((current) => current.map((item) => ({ ...item, status: "error", error: message })));
+          setCertificates((current) => current.map((item) => ({ ...item, status: "error" as const, error: message })));
         }
       } finally {
         if (!cancelled) setIsGenerating(false);
@@ -160,13 +160,13 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       const name = safeFileName(recipientName(editedRecipient, mapping, selectedIndex), `certificate_${selectedIndex + 1}`);
       const pdfBlob = await convertDocxToPdf(docxBlob, `${name}.docx`);
       setCertificates((current) => current.map((item, index) => index === selectedIndex
-        ? { ...item, recipient: editedRecipient, docx: docxBlob, pdf: pdfBlob, status: "ready", error: undefined, reviewed: false, approved: false }
+        ? { ...item, recipient: editedRecipient, docx: docxBlob, pdf: pdfBlob, status: "ready" as const, error: undefined, reviewed: false, approved: false }
         : item));
       toast.success("Certificate regenerated. Please review and approve it again.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not regenerate this certificate.";
       setCertificates((current) => current.map((item, index) => index === selectedIndex
-        ? { ...item, status: "error", error: message, reviewed: false, approved: false }
+        ? { ...item, status: "error" as const, error: message, reviewed: false, approved: false }
         : item));
       toast.error(message);
     } finally {
