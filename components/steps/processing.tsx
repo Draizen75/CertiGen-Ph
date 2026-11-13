@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Recipient, OutputMode } from "@/lib/types";
 import { generateDocx, mergeDocxBuffers } from "@/lib/docx-engine";
-import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileText, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, CheckCheck, Download, FileText, Loader2, RefreshCw, ShieldCheck, SkipForward } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -147,6 +147,37 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
   const progress = recipients.length ? Math.round((processed / recipients.length) * 100) : 0;
 
   const editableFields = Object.entries(mapping);
+  const allCertificatesReady = certificates.length > 0 && certificates.every((item) => item.status === "ready" && item.docx && item.pdf);
+  const allReviewed = allCertificatesReady && certificates.every((item) => item.reviewed);
+  const allApproved = allReviewed && certificates.every((item) => item.approved);
+
+  function markAllReviewed() {
+    if (!allCertificatesReady) return;
+    setCertificates((current) => current.map((item) => item.status === "ready"
+      ? { ...item, reviewed: true }
+      : item));
+    toast.success("All generated certificates marked as reviewed.");
+  }
+
+  function approveAllReviewed() {
+    if (!allReviewed || isGenerating) return;
+    const confirmed = window.confirm(
+      `Approve all ${certificates.length} certificates? This confirms that you have checked the batch and want every generated certificate included in the download.`,
+    );
+    if (!confirmed) return;
+    setCertificates((current) => current.map((item) => item.status === "ready" && item.reviewed
+      ? { ...item, approved: true }
+      : item));
+    toast.success("All reviewed certificates approved.");
+  }
+
+  function goToNextUnreviewed() {
+    const nextIndex = certificates.findIndex((item, index) => index > selectedIndex && item.status === "ready" && !item.reviewed);
+    const wrappedIndex = nextIndex >= 0
+      ? nextIndex
+      : certificates.findIndex((item) => item.status === "ready" && !item.reviewed);
+    if (wrappedIndex >= 0) selectRecipient(wrappedIndex);
+  }
 
   function selectRecipient(index: number) {
     setSelectedIndex(index);
@@ -249,6 +280,28 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
       )}
 
       {batchError && <Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Batch generation error</AlertTitle><AlertDescription>{batchError}</AlertDescription></Alert>}
+      {!isGenerating && allCertificatesReady && (
+        <section className="space-y-3 rounded-xl border bg-card p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold">Batch review actions</h3>
+              <p className="text-xs text-muted-foreground">For large batches, use bulk actions after checking the certificates. Individual review remains available below.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={goToNextUnreviewed} disabled={reviewedCount === certificates.length}>
+                <SkipForward className="mr-2 size-4" />Next unreviewed
+              </Button>
+              <Button size="sm" variant="outline" onClick={markAllReviewed} disabled={allReviewed}>
+                <CheckCircle2 className="mr-2 size-4" />{allReviewed ? "All reviewed" : "Mark all reviewed"}
+              </Button>
+              <Button size="sm" onClick={approveAllReviewed} disabled={!allReviewed || allApproved}>
+                <CheckCheck className="mr-2 size-4" />{allApproved ? "All approved" : "Approve all"}
+              </Button>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Bulk review and approval are explicit confirmations; they do not automatically inspect or validate certificate content. You can still open and approve individual recipients separately.</p>
+        </section>
+      )}
 
       {failedCount > 0 && (
         <Alert variant="destructive">
@@ -321,7 +374,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
                 </div>
                 <div className="space-y-3 rounded-xl bg-muted/40 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div>
-                  <p className="text-xs text-muted-foreground">Inspect the Word preview above. Mark it reviewed, then approve it for the batch download.</p>
+                  <p className="text-xs text-muted-foreground">Inspect the PDF preview above. Mark this recipient reviewed, then approve it for the batch download. You can also use the batch actions above.</p>
                   <div className="flex flex-wrap gap-2">
                     <Button disabled={isRegenerating} variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
                       <CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark as reviewed"}
@@ -344,7 +397,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
           {isDownloading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Download className="mr-2 size-4" />}Download approved batch ({approvedCount}/{certificates.length})
         </Button>
       </div>
-      {!canDownload && !isGenerating && <p className="text-center text-xs text-muted-foreground">Download unlocks after every certificate has generated successfully, been reviewed, and approved.</p>}
+      {!canDownload && !isGenerating && <p className="text-center text-xs text-muted-foreground">Download unlocks after every certificate has generated successfully, been reviewed, and approved. Use the batch review actions to avoid approving recipients one at a time.</p>}
       {canDownload && <p className="flex items-center justify-center gap-2 text-xs text-emerald-700"><CheckCircle2 className="size-4" />All certificates are generated, reviewed, and approved.</p>}
     </div>
   );
