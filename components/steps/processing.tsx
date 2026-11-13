@@ -277,9 +277,23 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
 
           {selected.status === "generating" && <div className="flex min-h-64 items-center justify-center gap-3 text-sm text-muted-foreground"><Loader2 className="size-5 animate-spin" />Generating this certificate…</div>}
           {selected.status === "error" && (
-            <div className="space-y-3 p-6">
+            <div className="space-y-4 p-6">
               <Alert variant="destructive"><AlertCircle className="size-4" /><AlertTitle>Certificate generation failed</AlertTitle><AlertDescription>{selected.error}</AlertDescription></Alert>
-              <Button onClick={regenerateSelected} disabled={isRegenerating}><RefreshCw className="mr-2 size-4" />Retry this certificate</Button>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Correct recipient data before retrying</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {editableFields.map(([placeholder, column]) => (
+                    <div key={placeholder} className="space-y-1">
+                      <Label htmlFor={`retry-edit-${selectedIndex}-${placeholder}`} className="text-xs">{placeholder}</Label>
+                      <Input disabled={isRegenerating} id={`retry-edit-${selectedIndex}-${placeholder}`} value={String(editedRecipient[column] ?? "")} onChange={(event) => setEditedRecipient((current) => ({ ...current, [column]: event.target.value }))} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <Button onClick={regenerateSelected} disabled={isRegenerating}>
+                {isRegenerating ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
+                Retry this certificate
+              </Button>
             </div>
           )}
           {selected.status === "ready" && selected.pdf && (
