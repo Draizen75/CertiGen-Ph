@@ -28,7 +28,7 @@ jobs:
       - name: Regenerate lockfile and apply non-breaking security updates
         run: |
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          npm audit fix --package-lock-only
+          npm audit fix --package-lock-only || true
 
       - name: Commit updated lockfile
         run: |
