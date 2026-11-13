@@ -3,6 +3,27 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+export async function GET() {
+  const configuredUrl = process.env.GOTENBERG_URL?.trim();
+  if (!configuredUrl) {
+    return NextResponse.json(
+      { ready: false, error: "PDF conversion is not configured. Set GOTENBERG_URL to a trusted Gotenberg service." },
+      { status: 503 },
+    );
+  }
+  try {
+    const baseUrl = new URL(configuredUrl);
+    if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("GOTENBERG_URL must use HTTP or HTTPS.");
+    const healthUrl = new URL("/health", baseUrl);
+    const response = await fetch(healthUrl, { signal: AbortSignal.timeout(5_000), cache: "no-store" });
+    if (!response.ok) throw new Error(`Gotenberg health check returned ${response.status}.`);
+    return NextResponse.json({ ready: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "The PDF conversion service is unavailable.";
+    return NextResponse.json({ ready: false, error: message }, { status: 503 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   const gotenbergUrl = process.env.GOTENBERG_URL?.trim();
   if (!gotenbergUrl) {
