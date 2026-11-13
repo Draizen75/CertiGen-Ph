@@ -8,9 +8,9 @@ CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX te
 - XLSX and CSV import, plus manual recipient entry.
 - Recipient-row review and inline editing before field mapping.
 - Conservative exact-name field auto-mapping with manual overrides.
-- Pre-generation recipient/value review and blank-value warnings.
+- Pre-generation recipient/value review and blank-value warnings.\n- Post-generation PDF review using PDFs converted from the exact generated DOCX files.\n- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated ZIP downloads containing PDFs and DOCX files.
 - Combined DOCX output or one DOCX per recipient in a ZIP archive.
-- Local browser-side processing; no account is required for the current workflow.
+- DOCX generation runs in the browser; PDF conversion uses a configured Gotenberg-compatible service. No account is required for the current workflow.
 - Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
 
 ## Requirements
