@@ -12,7 +12,7 @@ CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX te
 - Configure font family, size, weight, color, and alignment.
 - Preview sample recipient data before generation.
 - The same Canvas renderer is used for generated preview images and final PNG downloads.
-- PNG certificates are generated locally and packaged into a ZIP. No Gotenberg service or external conversion endpoint is used.
+- PNG certificates are generated locally and packaged into a ZIP, alongside a combined multi-page PDF built from those exact PNGs in the browser. No Gotenberg service or external conversion endpoint is used.
 
 ### DOCX templates
 - Existing Word templates and supported merge-field delimiters: `{{FIELD}}`, `[FIELD]`, `<FIELD>`, and `«FIELD»`.
