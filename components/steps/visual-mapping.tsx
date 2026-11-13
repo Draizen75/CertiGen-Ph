@@ -12,17 +12,18 @@ import { VisualBackground, VisualField, createDefaultVisualField } from "@/lib/v
 interface Props {
   background: VisualBackground;
   columns: string[];
-  sampleRecipient: Record<string, string>;
+  sampleRecipients: Record<string, string>[];
   onComplete: (fields: VisualField[]) => void;
   onBack: () => void;
 }
 
 type DragState = { id: string; mode: "move" | "resize"; startX: number; startY: number; original: VisualField } | null;
 
-export function VisualMapping({ background, columns, sampleRecipient, onComplete, onBack }: Props) {
+export function VisualMapping({ background, columns, sampleRecipients, onComplete, onBack }: Props) {
   const [fields, setFields] = useState<VisualField[]>(() => [createDefaultVisualField(columns, 0)]);
   const [selectedId, setSelectedId] = useState(fields[0]?.id ?? "");
-  const [previewRecipient, setPreviewRecipient] = useState(sampleRecipient);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const previewRecipient = sampleRecipients[previewIndex] ?? {};
   const [stageWidth, setStageWidth] = useState(0);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState>(null);
@@ -80,7 +81,7 @@ export function VisualMapping({ background, columns, sampleRecipient, onComplete
           </div>
           <div className="overflow-auto">
             <div ref={stageRef} onPointerMove={onPointerMove} onPointerUp={stopDrag} onPointerCancel={stopDrag} onPointerLeave={stopDrag}
-              className="relative mx-auto w-full touch-none select-none overflow-hidden bg-white shadow-sm" style={{ aspectRatio: `${background.width} / ${background.height}`, maxWidth: "100%" }}>
+              className="relative mx-auto w-full touch-none select-none overflow-hidden bg-white shadow-sm" style={{ aspectRatio: `${background.width} / ${background.height}`, maxWidth: "100%", containerType: "inline-size" }}>
               <img src={background.dataUrl} alt="Certificate template background" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-fill" />
               {fields.map((field) => {
                 const active = selectedId === field.id;
@@ -109,9 +110,9 @@ export function VisualMapping({ background, columns, sampleRecipient, onComplete
           {selected && <>
             <div className="space-y-2"><Label>Field label</Label><Input value={selected.label} onChange={(event) => updateField({ label: event.target.value })} /></div>
             <div className="space-y-2"><Label>Spreadsheet column</Label>
-              <Select value={selected.column} onValueChange={(column) => { updateField({ column }); setPreviewRecipient(sampleRecipient); }}><SelectTrigger><SelectValue placeholder="Choose a column" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column} value={column}>{column}</SelectItem>)}</SelectContent></Select>
+              <Select value={selected.column} onValueChange={(column) => { updateField({ column }); setPreviewIndex(0); }}><SelectTrigger><SelectValue placeholder="Choose a column" /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column} value={column}>{column}</SelectItem>)}</SelectContent></Select>
             </div>
-            <div className="space-y-2"><Label>Preview recipient</Label><Select value={Object.keys(sampleRecipient).find((key) => sampleRecipient[key] === previewRecipient[key]) ?? columns[0] ?? ""} onValueChange={(column) => setPreviewRecipient({ ...sampleRecipient, [column]: sampleRecipient[column] })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{columns.map((column) => <SelectItem key={column} value={column}>{column}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>Preview recipient</Label><Select value={String(previewIndex)} onValueChange={(value) => setPreviewIndex(Number(value))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{sampleRecipients.map((recipient, index) => <SelectItem key={index} value={String(index)}>{index + 1}. {String(Object.values(recipient)[0] ?? `Recipient ${index + 1}`)}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1"><Label>Font size (px)</Label><Input type="number" min={8} max={240} value={selected.fontSize} onChange={(event) => updateField({ fontSize: Math.max(8, Number(event.target.value) || 8) })} /></div>
               <div className="space-y-1"><Label>Font family</Label><Select value={selected.fontFamily} onValueChange={(fontFamily) => updateField({ fontFamily })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["Arial","Georgia","Times New Roman","Verdana","Trebuchet MS"].map((font) => <SelectItem key={font} value={font}>{font}</SelectItem>)}</SelectContent></Select></div>
