@@ -13,14 +13,15 @@ interface Props {
   background: VisualBackground;
   columns: string[];
   sampleRecipients: Record<string, string>[];
+  initialFields?: VisualField[];
   onComplete: (fields: VisualField[]) => void;
   onBack: () => void;
 }
 
 type DragState = { id: string; mode: "move" | "resize"; startX: number; startY: number; original: VisualField } | null;
 
-export function VisualMapping({ background, columns, sampleRecipients, onComplete, onBack }: Props) {
-  const [fields, setFields] = useState<VisualField[]>(() => [createDefaultVisualField(columns, 0)]);
+export function VisualMapping({ background, columns, sampleRecipients, initialFields, onComplete, onBack }: Props) {
+  const [fields, setFields] = useState<VisualField[]>(() => initialFields?.length ? initialFields : [createDefaultVisualField(columns, 0)]);
   const [selectedId, setSelectedId] = useState(fields[0]?.id ?? "");
   const [previewIndex, setPreviewIndex] = useState(0);
   const previewRecipient = sampleRecipients[previewIndex] ?? {};
