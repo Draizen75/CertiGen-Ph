@@ -129,7 +129,6 @@ export function CertificateGenerator() {
               recipients={recipients}
               mapping={mapping}
               placeholders={placeholders}
-              delimiters={delimiters}
               outputMode={outputMode}
               onBack={prevStep}
               onGenerate={nextStep}
