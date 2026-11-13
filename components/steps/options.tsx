@@ -20,14 +20,14 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
     {
       value: "COMBINED_DOCX" as const,
       title: "One combined Word document",
-      description: "All certificates in one editable DOCX. Individual reviewed PDFs are also included in the approved ZIP.",
+      description: "All personalized certificates in one editable Word document.",
       icon: FileText,
       note: "Best for printing",
     },
     {
       value: "SEPARATE_DOCX" as const,
       title: "Individual Word documents",
-      description: "A ZIP archive with one editable DOCX per recipient, alongside each reviewed PDF.",
+      description: "A ZIP archive containing one editable Word document per recipient.",
       icon: FileArchive,
       note: "Best for sharing",
     },
@@ -67,7 +67,7 @@ export function Options({ recipientsCount, onBack, onGenerate }: Props) {
       <div className="flex items-start gap-3 rounded-xl bg-muted/50 p-4">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <p className="text-xs leading-5 text-muted-foreground">
-          DOCX files are generated in your browser. To create accurate PDF previews, each generated DOCX is sent through the configured PDF conversion service. Do not continue with confidential recipient data unless you trust the service configured by this deployment.
+          Certificates are generated and previewed in your browser. Recipient data and generated documents are not sent to an external PDF conversion service.
         </p>
       </div>
 
