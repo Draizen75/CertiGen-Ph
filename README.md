@@ -10,8 +10,8 @@ CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX te
 - Conservative exact-name field auto-mapping with manual overrides.
 - Pre-generation recipient/value review and blank-value warnings.
 - Post-generation PDF preview converted directly from each personalized DOCX using LibreOffice through Gotenberg.
-- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated DOCX downloads.
-- Combined DOCX output or one DOCX per recipient in a ZIP archive.
+- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated DOCX and matching PDF downloads.
+- Combined DOCX output or one DOCX per recipient in a ZIP archive; matching PDFs are included in either mode.
 - DOCX generation runs in the browser. PDF preview requires a trusted Gotenberg conversion service configured with `GOTENBERG_URL`; generated recipient data is sent to that service.
 - Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
 
@@ -47,9 +47,9 @@ Before releasing a change, manually test:
 
 ## Certificate review
 
-CertiGen generates each personalized DOCX once in the browser and previews that same generated file using a browser-side DOCX renderer. The preview is intended for content and layout review, but it is not a pixel-perfect replacement for Microsoft Word or LibreOffice; pagination, fonts, and some advanced Word features may render differently. Open the downloaded DOCX in Word or LibreOffice when exact print layout matters.
+CertiGen generates each personalized DOCX once in the browser, then converts that exact DOCX to PDF through LibreOffice on the configured Gotenberg service. The PDF preview preserves floating text boxes, paragraph alignment, page dimensions, images, and pagination much more faithfully than a browser DOCX-to-HTML renderer. The original DOCX remains the editable source and is not recreated for preview.
 
-Users can navigate between generated certificates, edit mapped recipient values, and regenerate only the affected certificate. Regeneration resets that certificate's review and approval state. Batch download remains disabled until every certificate has a successful DOCX, is marked reviewed, and is approved. Downloads contain either one combined DOCX or individual DOCX files, according to the selected output mode.
+Users can navigate between generated certificates, edit mapped recipient values, and regenerate only the affected certificate. Regeneration resets that certificate's review and approval state. Batch download remains disabled until every certificate has a successful DOCX and matching PDF, is marked reviewed, and is approved. Every ZIP includes the matching PDF previews; the selected output mode determines whether it also contains individual DOCX files or one combined DOCX.
 
 ## Product direction
 
