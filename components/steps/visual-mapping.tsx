@@ -55,7 +55,7 @@ export function VisualMapping({ background, columns, sampleRecipients, initialFi
     }));
   };
   const stopDrag = () => { dragRef.current = null; };
-  const startDrag = (event: React.PointerEvent<HTMLDivElement>, field: VisualField, mode: "move" | "resize") => {
+  const startDrag = (event: React.PointerEvent<HTMLElement>, field: VisualField, mode: "move" | "resize") => {
     event.preventDefault();
     event.stopPropagation();
     setSelectedId(field.id);
