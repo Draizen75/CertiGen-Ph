@@ -84,7 +84,7 @@ export function Review({ recipients, mapping, placeholders, outputMode, template
 
       <section className="flex items-center gap-3 rounded-xl border p-4">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">{isCombined ? <FileText className="size-5" /> : <FileArchive className="size-5" />}</span>
-        <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{templateKind !== "docx" ? "Individual PNG certificates" : isCombined ? "Combined DOCX files" : "Individual DOCX files"}</p><p className="text-xs text-muted-foreground">{recipients.length.toLocaleString()} certificate(s) · {templateKind !== "docx" ? "PNG files are included in the approved ZIP download." : "Editable Word files are included in the approved ZIP download."}</p></div>
+        <div className="min-w-0 flex-1"><p className="text-sm font-semibold">{templateKind !== "docx" ? "Individual PNG certificates" : isCombined ? "Combined DOCX files" : "Individual DOCX files"}</p><p className="text-xs text-muted-foreground">{recipients.length.toLocaleString()} certificate(s) · {templateKind !== "docx" ? "Individual PNGs and a combined PDF are included in the approved ZIP download." : "Editable Word files are included in the approved ZIP download."}</p></div>
       </section>
 
       <div className="flex flex-col-reverse justify-between gap-3 border-t pt-5 sm:flex-row">
