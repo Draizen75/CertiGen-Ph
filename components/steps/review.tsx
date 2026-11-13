@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Recipient, OutputMode } from "@/lib/types";
@@ -24,11 +24,6 @@ export function Review({ templateFile, recipients, mapping, placeholders, delimi
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const selectedRecipient = recipients[selectedIndex] ?? {};
-  const fields = useMemo(() => placeholders.map((placeholder) => ({
-    placeholder,
-    column: mapping[placeholder] ?? "",
-    value: String(selectedRecipient[mapping[placeholder] ?? ""] ?? "").trim(),
-  })), [placeholders, mapping, selectedRecipient]);
   const missingCount = useMemo(() => recipients.reduce((count, recipient) => (
     count + placeholders.filter((placeholder) => !String(recipient[mapping[placeholder] ?? ""] ?? "").trim()).length
   ), 0), [recipients, placeholders, mapping]);
