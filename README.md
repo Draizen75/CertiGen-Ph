@@ -1,6 +1,6 @@
 # CertiGen PH
 
-CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, review the resulting PDFs, and download approved PDF/DOCX output.
+CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX template, import recipient data from XLSX/CSV or paste names, map template placeholders, confirm recipient data, generate certificates, preview the generated Word documents, and download approved DOCX output.
 
 ## Features
 
@@ -9,10 +9,10 @@ CertiGen PH is a browser-based bulk certificate generator. Upload a Word DOCX te
 - Recipient-row review and inline editing before field mapping.
 - Conservative exact-name field auto-mapping with manual overrides.
 - Pre-generation recipient/value review and blank-value warnings.
-- Post-generation PDF review using PDFs converted from the exact generated DOCX files.
-- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated ZIP downloads containing PDFs and DOCX files.
+- Post-generation browser preview of each personalized DOCX file.
+- Per-recipient navigation, inline correction and regeneration, review/approval tracking, and approval-gated DOCX downloads.
 - Combined DOCX output or one DOCX per recipient in a ZIP archive.
-- DOCX generation runs in the browser; PDF conversion uses a configured Gotenberg-compatible service. No account is required for the current workflow.
+- DOCX generation and preview run in the browser; no external document-conversion service or account is required.
 - Batch safety limits: 1,000 recipients, 50 columns, 10 MB input files.
 
 ## Requirements
@@ -43,18 +43,12 @@ Before releasing a change, manually test:
 - Combined DOCX and separate ZIP generation.
 - Navigation away during generation, retry after an error, and a batch near the 1,000-recipient limit.
 
-## PDF conversion service
-
-The review workflow converts each generated DOCX to PDF using a Gotenberg-compatible service backed by LibreOffice. Configure `GOTENBERG_URL` in the deployment environment to the base URL of a trusted Gotenberg instance, for example `https://gotenberg.example.com`. The app checks the service health before starting a batch and posts each generated DOCX to Gotenberg's `/forms/libreoffice/convert` endpoint through the server-side `/api/convert` route.
-
-Do not expose an unauthenticated converter publicly; protect it with network access controls or an authenticated reverse proxy. Generated DOCX files contain recipient data and are sent to the configured conversion service, so deployments must disclose this processing and use a service appropriate for the sensitivity of the data. The conversion route enforces a 4 MB per-DOCX limit to stay within typical Vercel request payload constraints; deployments must also account for function duration limits. If the converter is unavailable or not configured, generation stops before creating the batch.
-
 ## Certificate review
 
-CertiGen generates each personalized DOCX once and converts that same file to PDF. The PDF is the primary visual review artifact and is also included in the approved batch download. Browser PDF viewers display the converted PDF rather than approximating Word layout. PDF fidelity still depends on the conversion service version and installed fonts; verify representative templates before production use.
+CertiGen generates each personalized DOCX once in the browser and previews that same generated file using a browser-side DOCX renderer. The preview is intended for content and layout review, but it is not a pixel-perfect replacement for Microsoft Word or LibreOffice; pagination, fonts, and some advanced Word features may render differently. Open the downloaded DOCX in Word or LibreOffice when exact print layout matters.
 
-Users can navigate between generated certificates, edit mapped recipient values, and regenerate only the affected certificate. Regeneration resets that certificate's review and approval state. Batch download remains disabled until every certificate has a successful DOCX/PDF, is marked reviewed, and is approved.
+Users can navigate between generated certificates, edit mapped recipient values, and regenerate only the affected certificate. Regeneration resets that certificate's review and approval state. Batch download remains disabled until every certificate has a successful DOCX, is marked reviewed, and is approved. Downloads contain either one combined DOCX or individual DOCX files, according to the selected output mode.
 
 ## Product direction
 
-The current release intentionally keeps the workflow account-free. DOCX merge generation runs in the browser, while PDF conversion is handled by the deployment-configured service. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
+The current release intentionally keeps the workflow account-free. DOCX generation, merging, and preview run in the browser. Authentication, cloud-saved projects, generation history, paid usage tiers, team workspaces, email delivery, QR verification, and API access should be introduced as separate product phases after the local workflow and deployment pipeline are validated. Do not describe these future capabilities as available until implemented.
