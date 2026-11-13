@@ -354,7 +354,7 @@ export function Processing({ templateFile, recipients, mapping, delimiters, outp
                 </div>
                 <div className="space-y-3 rounded-xl bg-muted/40 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="size-4" />Review decision</div>
-                  <p className="text-xs text-muted-foreground">Inspect the PDF preview above. Mark this recipient reviewed, then approve it for the batch download. You can also use the batch actions above.</p>
+                  <p className="text-xs text-muted-foreground">Inspect the Word preview above. Mark this recipient reviewed, then approve it for the batch download. You can also use the batch actions above.</p>
                   <div className="flex flex-wrap gap-2">
                     <Button disabled={isRegenerating} variant={selected.reviewed ? "secondary" : "outline"} onClick={() => setCertificates((current) => current.map((item, index) => index === selectedIndex ? { ...item, reviewed: true } : item))}>
                       <CheckCircle2 className="mr-2 size-4" />{selected.reviewed ? "Reviewed" : "Mark as reviewed"}
