@@ -55,7 +55,10 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
       }
       if (!cancelled) setGenerating(false);
     }
-    if (!recipients.length || !fields.length) {\n      void Promise.resolve().then(() => { if (!cancelled) { setBatchError("Add recipients and map at least one visual field."); setGenerating(false); } });\n      return;\n    }
+    if (!recipients.length || !fields.length) {
+      void Promise.resolve().then(() => { if (!cancelled) { setBatchError("Add recipients and map at least one visual field."); setGenerating(false); } });
+      return;
+    }
     void Promise.resolve().then(() => { if (!cancelled) return run(); }).catch((error) => { if (!cancelled) { setBatchError(error instanceof Error ? error.message : "Batch generation failed."); setGenerating(false); } });
     return () => { cancelled = true; };
   }, [background, fields, recipients]);
@@ -74,7 +77,8 @@ export function VisualProcessing({ background, fields, recipients, onBack }: Pro
   useEffect(() => {
     if (!selected?.image) return;
     const url = URL.createObjectURL(selected.image);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizes the selected Blob with its browser object URL.\n    setPreviewUrl(url);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronizes the selected Blob with its browser object URL.
+    setPreviewUrl(url);
     return () => { URL.revokeObjectURL(url); };
   }, [selected?.image]);
 
